@@ -1,55 +1,100 @@
-const { app, BrowserWindow, BrowserView, globalShortcut } = require('electron');
+const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+
+// ================================================================= //
+// הגדרות ומשתנים גלובליים
+// ================================================================= //
+// נתיב לקובץ ההגדרות ששומר אם המשתמש כבר ראה את ההוראות
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
+// משתנים שיחזיקו את החלון הראשי (win) ואת התצוגה של ג'מיני (view)
+// הם מוגדרים כאן כדי שיהיו זמינים בכל הפונקציות בקובץ.
+let win;
+let view;
+
+// ================================================================= //
+// פונקציות עזר (Helper Functions)
+// ================================================================= //
+
+/**
+ * פונקציה שבודקת האם יש להציג את דף ההוראות (onboarding).
+ * היא קוראת את קובץ ההגדרות. אם הקובץ לא קיים או שהערך לא מסומן, תחזיר true.
+ * @returns {boolean} - true אם צריך להציג את ההוראות, אחרת false.
+ */
 function shouldShowOnboarding() {
   try {
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
     return settings.onboardingShown !== true;
   } catch (e) {
-    return true; // אם הקובץ לא קיים או פגום – נציג onboarding
+    // אם הקובץ לא קיים או שיש שגיאה בקריאה שלו - נניח שצריך להציג את ההוראות.
+    return true;
   }
 }
 
+/**
+ * פונקציה שכותבת לקובץ ההגדרות שהמשתמש סיים את תהליך ההוראות.
+ */
 function markOnboardingAsShown() {
-  fs.writeFileSync(settingsPath, JSON.stringify({ onboardingShown: true }));
+  fs.writeFileSync(settingsPath, JSON.stringify({ onboardingShown: true }), 'utf-8');
 }
-let win;
-let view;
+
+
+// ================================================================= //
+// ניהול החלון והתצוגה הראשית
+// ================================================================= //
+
+/**
+ * הפונקציה המרכזית שמנהלת את טעינת והצגת התצוגה של Gemini.
+ * **הערה חשובה:** היא יוצרת את אובייקט ה-BrowserView (שמכיל את אתר ג'מיני)
+ * רק בפעם הראשונה. בפעמים הבאות, היא משתמשת באובייקט הקיים כדי למנוע טעינה מחדש.
+ */
 function loadGemini() {
+  // טוען את קובץ ה-HTML שמכיל רק את סרגל הגרירה העליון לחלון הראשי.
   win.loadFile('drag.html');
 
-  view = new BrowserView({
-    webPreferences: {
-      partition: 'persist:gemini-session'
-    }
-  });
+  // **החלק החכם**: בדוק אם התצוגה (view) כבר נוצרה.
+  if (!view) {
+    // אם לא, צור אותה בפעם הראשונה.
+    console.log('Creating new BrowserView for Gemini.');
+    view = new BrowserView({
+      webPreferences: {
+        // 'partition' מבטיח שהסשן (עוגיות, לוקל סטורג') יישמר בין הפעלות.
+        partition: 'persist:gemini-session'
+      }
+    });
 
-  win.setBrowserView(view);
-  view.setBounds({ x: 0, y: 30, width: 500, height: 620 });
-  view.setAutoResize({ width: true, height: true });
-  view.webContents.on('will-navigate', (event, url) => {
-    if (url.startsWith('file://')) {
-      event.preventDefault();
-    }
-  });
+    // מונע ניווט לקבצים מקומיים מתוך האתר של ג'מיני (אבטחה).
+    view.webContents.on('will-navigate', (event, url) => {
+      if (url.startsWith('file://')) {
+        event.preventDefault();
+      }
+    });
 
-  view.webContents.loadURL('https://gemini.google.com/app');
-}
-function showGeminiView() {
-  if (win && view) {
-    win.loadFile('drag.html'); // טען מחדש את סרגל הגרירה
-    win.setBrowserView(view); // החזר את התצוגה הקיימת של Gemini לחלון
-    view.setBounds({ x: 0, y: 30, width: win.getBounds().width, height: win.getBounds().height - 30 }); // ודא שהגודל נכון
+    // טען את האתר של ג'מיני לתוך התצוגה.
+    view.webContents.loadURL('https://gemini.google.com/app');
   }
+
+  // הצמד את התצוגה (הקיימת או החדשה) לחלון הראשי.
+  win.setBrowserView(view);
+
+  // קבע את הגודל והמיקום של התצוגה כך שתתאים לחלון, מתחת לסרגל הגרירה.
+  const bounds = win.getBounds();
+  view.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
+  view.setAutoResize({ width: true, height: true }); // מאפשר שינוי גודל אוטומטי עם החלון.
 }
+
+/**
+ * פונקציה שיוצרת את החלון הראשי של האפליקציה.
+ * @param {boolean} showOnboarding - קובע האם להציג את דף ההוראות או לטעון ישר את ג'מיני.
+ */
 function createWindow(showOnboarding) {
   win = new BrowserWindow({
     width: 500,
     height: 650,
-    frame: false,
-    alwaysOnTop: true,
+    frame: false, // מסתיר את מסגרת ברירת המחדל של חלונות
+    alwaysOnTop: true, // החלון תמיד יהיה מעל חלונות אחרים
     icon: path.join(__dirname, 'icon.ico'),
     show: true,
     webPreferences: {
@@ -59,6 +104,7 @@ function createWindow(showOnboarding) {
     }
   });
 
+  // החלטה מה לטעון בהתבסס על הפרמטר שהתקבל.
   if (showOnboarding) {
     win.loadFile('onboarding.html');
   } else {
@@ -66,49 +112,80 @@ function createWindow(showOnboarding) {
   }
 }
 
+// ================================================================= //
+// מחזור החיים של האפליקציה (App Lifecycle)
+// ================================================================= //
 
-
+// בלוק זה ירוץ רק לאחר ש-Electron סיים את האתחול שלו ומוכן ליצור חלונות.
 app.whenReady().then(() => {
-  const showOnboarding = shouldShowOnboarding();
-  createWindow(showOnboarding);
+  // 1. צור את החלון הראשי.
+  createWindow(shouldShowOnboarding());
+
+  // 2. בדוק אם קיימים עדכונים לאפליקציה והודע למשתמש.
+  autoUpdater.checkForUpdatesAndNotify();
+
+  // 3. רשום את קיצורי המקשים הגלובליים.
   globalShortcut.register('Control+Q', () => {
     if (win) win.destroy();
     app.quit();
   });
+
   globalShortcut.register('Control+G', () => {
     if (!win) return;
-    if (win.isVisible()) {
-      win.hide();
-    } else {
-      win.show();
-      win.focus();
+    win.isVisible() ? win.hide() : win.show();
+  });
+
+  globalShortcut.register('Control+I', () => {
+    // אם החלון קיים ויש לו תצוגה מוצמדת (כלומר, ג'מיני מוצג)
+    if (win && win.getBrowserView()) {
+      win.removeBrowserView(view); // הסר את התצוגה מהחלון (אך היא נשארת בזיכרון במשתנה 'view')
+      win.loadFile('onboarding.html'); // טען את דף ההוראות
     }
   });
-globalShortcut.register('Control+I', () => {
-  if (win && win.getBrowserView()) { // בדוק שיש מה להסיר
-    win.removeBrowserView(win.getBrowserView()); // הסר את התצוגה מהחלון, אך שמור אותה בזיכרון
-    win.loadFile('onboarding.html');
-  }
-});
 });
 
-const { ipcMain } = require('electron');
+// ================================================================= //
+// טיפול באירועים (Event Handlers)
+// ================================================================= //
 
+// האזנה לאירוע 'onboarding-complete' שנשלח מדף ההוראות.
 ipcMain.on('onboarding-complete', () => {
   markOnboardingAsShown();
-  // במקום לבנות מחדש, נציג את התצוגה הקיימת
-  if (!win.getBrowserView()) { // אם אנחנו חוזרים מדף ההוראות
-    showGeminiView();
-  } else { // אם זו הפעלה ראשונה
-    loadGemini();
-  }
+  // קרא לפונקציה שטוענת את ג'מיני. היא תשתמש בתצוגה הקיימת אם קיימת.
+  loadGemini();
+});
+
+// אירועי עדכון אוטומטי
+autoUpdater.on('update-available', () => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Available',
+    message: 'A new version is available and will be downloaded in the background.',
+    buttons: ['OK']
+  });
+});
+
+autoUpdater.on('update-downloaded', () => {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Ready',
+    message: 'A new version has been downloaded. It will be installed on the next restart.',
+    buttons: ['Restart Now', 'Later']
+  }).then(result => {
+    if (result.response === 0) { // אם המשתמש לחץ על "Restart Now"
+      autoUpdater.quitAndInstall();
+    }
+  });
 });
 
 
+// ניקוי לפני יציאה מהאפליקציה
 app.on('will-quit', () => {
+  // בטל את כל קיצורי הדרך הגלובליים
   globalShortcut.unregisterAll();
 });
 
+// סגירת האפליקציה כאשר כל החלונות נסגרים (התנהגות סטנדרטית)
 app.on('window-all-closed', () => {
   app.quit();
 });

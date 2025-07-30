@@ -1,6 +1,6 @@
 {
   "name": "gemini-app",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Gemini Desktop Wrapper",
   "main": "main.js",
   "scripts": {
@@ -12,37 +12,44 @@
     "electron-builder": "^26.0.12"
   },
   "dependencies": {
-    "auto-launch": "^5.0.6"
+    "auto-launch": "^5.0.6",
+    "electron-updater": "^6.6.2"
   },
-"build": {
-  "appId": "com.hillel.geminiapp",
-  "productName": "GeminiApp",
-  "icon": "icon.ico",
-  "asar": true,
-  "compression": "maximum",
-  "files": [
-    "main.js",
-     "onboarding.html",
-    "preload.js",
-    "drag.html",
-    "icon.ico",
-    "node_modules/auto-launch",
-    "package.json"
-  ],
-  "win": {
-    "target": [
-      "nsis"
+  "build": {
+    "appId": "com.hillel.geminiapp",
+    "productName": "GeminiApp",
+    "icon": "icon.ico",
+    "asar": true,
+    "compression": "maximum",
+    "files": [
+      "main.js",
+      "onboarding.html",
+      "preload.js",
+      "drag.html",
+      "icon.ico",
+      "node_modules/auto-launch",
+      "package.json"
     ],
-    "requestedExecutionLevel": "asInvoker"
-  },
-  "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
-    "createDesktopShortcut": true,
-    "createStartMenuShortcut": true,
-    "runAfterFinish": true,
-    "include": "installer.nsh"
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "hillelkingqt",
+        "repo": "GeminiDesk"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "include": "installer.nsh"
+    }
   }
-}
-
 }
