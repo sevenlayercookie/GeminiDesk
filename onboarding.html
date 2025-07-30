@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to GeminiApp</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #1a1d21;
+      color: #e0e0e0;
+      font-family: 'Poppins', sans-serif;
+      overflow: hidden; /* Prevents scrollbars during animation */
+    }
+
+    .drag-bar {
+      width: 100%;
+      height: 30px;
+      -webkit-app-region: drag;
+      background-color: #101214;
+      user-select: none;
+    }
+
+    .container {
+      padding: 40px;
+      text-align: center;
+    }
+
+    .title {
+      font-size: 2.5em;
+      font-weight: 600;
+      color: #8ab4f8; /* A nice Google blue */
+      margin-bottom: 20px;
+      animation: fadeInDown 0.8s ease-out forwards;
+    }
+
+    .subtitle {
+      font-size: 1.1em;
+      font-weight: 300;
+      margin-bottom: 35px;
+      animation: fadeInUp 0.8s ease-out 0.2s forwards;
+      opacity: 0;
+    }
+
+    .shortcuts-list {
+      list-style-type: none;
+      padding: 0;
+      margin: 0 auto;
+      max-width: 350px;
+    }
+
+    .shortcut-item {
+      background-color: #282a2e;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      opacity: 0;
+      animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    /* Staggered animation delays */
+    .shortcut-item:nth-child(1) { animation-delay: 0.4s; }
+    .shortcut-item:nth-child(2) { animation-delay: 0.5s; }
+    .shortcut-item:nth-child(3) { animation-delay: 0.6s; }
+    .shortcut-item:nth-child(4) { animation-delay: 0.7s; }
+
+    .shortcut-desc {
+      font-weight: 300;
+    }
+
+    .shortcut-key {
+      font-weight: 400;
+      background-color: #3c4043;
+      padding: 5px 10px;
+      border-radius: 5px;
+      border-bottom: 2px solid #5f6368;
+    }
+
+    .launch-button {
+      margin-top: 30px;
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      background: linear-gradient(90deg, #8ab4f8, #a6c8ff);
+      color: #101214;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      opacity: 0;
+      animation: fadeInUp 0.8s ease-out 1s forwards;
+    }
+
+    .launch-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(138, 180, 248, 0.3);
+    }
+
+    /* Animations */
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="drag-bar"></div>
+
+  <div class="container">
+    <h1 class="title">Welcome to Gemini</h1>
+    <p class="subtitle">Your AI assistant, always ready on your desktop.</p>
+
+    <ul class="shortcuts-list">
+      <li class="shortcut-item">
+        <span class="shortcut-desc">Show / Hide Window</span>
+        <span class="shortcut-key">Ctrl + G</span>
+      </li>
+      <li class="shortcut-item">
+        <span class="shortcut-desc">Quit Application</span>
+        <span class="shortcut-key">Ctrl + Q</span>
+      </li>
+      <li class="shortcut-item">
+          <span class="shortcut-desc">Move Window</span>
+          <span class="shortcut-key">Drag Top Bar</span>
+      </li>
+      <li class="shortcut-item">
+        <span class="shortcut-desc">See these instructions again</span>
+        <span class="shortcut-key">Ctrl + I</span>
+      </li>
+    </ul>
+
+    <button class="launch-button" onclick="completeOnboarding()">Got it! Launch Gemini</button>
+  </div>
+
+  <script>
+    function completeOnboarding() {
+      if (window.electronAPI && window.electronAPI.completeOnboarding) {
+        window.electronAPI.completeOnboarding();
+      }
+    }
+  </script>
+</body>
+</html>

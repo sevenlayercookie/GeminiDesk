@@ -22,6 +22,7 @@
   "compression": "maximum",
   "files": [
     "main.js",
+     "onboarding.html",
     "preload.js",
     "drag.html",
     "icon.ico",
