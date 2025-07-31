@@ -1,6 +1,6 @@
 {
   "name": "gemini-app",
-  "version": "1.0.2",
+  "version": "2.5.0",
   "description": "Gemini Desktop Wrapper",
   "main": "main.js",
   "scripts": {
@@ -18,7 +18,8 @@
   "build": {
     "appId": "com.hillel.geminiapp",
     "productName": "GeminiApp",
-    "icon": "icon.ico",
+     "artifactName": "${productName}-Setup-${version}.${ext}",
+    "icon": "icon1.png",
     "asar": true,
     "compression": "maximum",
     "files": [
@@ -26,7 +27,9 @@
       "onboarding.html",
       "preload.js",
       "drag.html",
-      "icon.ico",
+       "settings.html",
+       "confirm-reset.html",
+      "icon1.png",
       "node_modules/auto-launch",
       "package.json"
     ],
@@ -50,6 +53,12 @@
       "createStartMenuShortcut": true,
       "runAfterFinish": true,
       "include": "installer.nsh"
-    }
+    },
+"linux": {
+  "target": ["AppImage"],
+  "category": "Utility",
+  "icon": "icon1.png"
+}
+
   }
 }

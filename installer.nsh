@@ -1,10 +1,11 @@
 !macro customInstall
-  MessageBox MB_YESNO|MB_ICONQUESTION "Do you want to run Gemini at system startup?" IDYES autoStart
+  ; MessageBox MB_YESNO|MB_ICONQUESTION "Do you want to run Gemini at system startup?"
+  ; IDYES autoStart
 
-  Goto skipAutoStart
+  ; Goto skipAutoStart
 
-  autoStart:
-    WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Run" "GeminiApp" "$INSTDIR\\GeminiApp.exe"
+  ; autoStart:
+  ;   WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Run" "GeminiApp" "$INSTDIR\\GeminiApp.exe"
 
-  skipAutoStart:
+  ; skipAutoStart:
 !macroend
