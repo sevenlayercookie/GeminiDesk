@@ -2,10 +2,10 @@ const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, dialog, screen
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
-const { execSync } = require('child_process');
-
+const { spawn, execSync } = require('child_process');
+const { clipboard, nativeImage } = require('electron');
 let confirmWin = null;
-
+let isQuitting = false;
 // ================================================================= //
 // ניהול הגדרות (Settings Management)
 // ================================================================= //
@@ -19,9 +19,10 @@ const defaultSettings = {
   shortcuts: {
     showHide: 'Alt+G',
     quit: 'Alt+Q',
-    showInstructions: 'Alt+I'
+    showInstructions: 'Alt+I',
+    screenshot: 'Control+Alt+S' 
   },
-  theme: 'dark' // אפשרויות עתידיות: 'light', 'system'
+  theme: 'dark'
 };
 
 // פונקציה לקריאת ההגדרות
@@ -120,8 +121,101 @@ function registerShortcuts() {
             }
         });
     }
-}
 
+if (shortcuts.screenshot) {
+    let isScreenshotProcessActive = false;
+
+    globalShortcut.register(shortcuts.screenshot, () => {
+        if (isQuitting || isScreenshotProcessActive) {
+            return;
+        }
+        isScreenshotProcessActive = true;
+
+        if (!win || win.isDestroyed()) {
+            createWindow();
+            win.once('ready-to-show', () => {
+                proceedWithScreenshot();
+            });
+        } else {
+            proceedWithScreenshot();
+        }
+    });
+
+    function proceedWithScreenshot() {
+        clipboard.clear();
+
+        // שמור את מצב הנראות הנוכחי של החלון
+        const wasVisible = win.isVisible();
+        
+        const snippingTool = spawn('explorer', ['ms-screenclip:'], {
+            detached: true,
+            stdio: 'ignore'
+        });
+        snippingTool.unref();
+
+        snippingTool.on('error', (err) => {
+            console.error('Failed to start snipping tool:', err);
+            isScreenshotProcessActive = false;
+        });
+
+        let checkAttempts = 0;
+        const maxAttempts = 60;
+        const intervalId = setInterval(() => {
+            if (checkAttempts++ > maxAttempts || (!win || win.isDestroyed())) {
+                clearInterval(intervalId);
+                isScreenshotProcessActive = false;
+                return;
+            }
+            
+            const image = clipboard.readImage();
+            if (!image.isEmpty()) {
+                clearInterval(intervalId);
+
+                if (win && !win.isDestroyed()) {
+                    // הבא את החלון לחזית ותן לו פוקוס
+                    if (!win.isVisible()) {
+                        win.show(); 
+                    }
+                    if (win.isMinimized()) {
+                        win.restore(); 
+                    }
+                    
+                    // הבטח שהחלון יישאר בראש
+                    win.setAlwaysOnTop(true);
+                    win.focus();
+                    win.moveTop(); // הוסף שורה זו - מבטיח שהחלון יהיה בחלק העליון של Z-order
+
+                    // המתן קצת כדי להבטיח שהחלון באמת בפוקוס
+                    setTimeout(() => {
+                        if (win && !win.isDestroyed() && view && view.webContents) {
+                            view.webContents.focus();
+                            view.webContents.paste();
+                            console.log('Screenshot pasted from clipboard!');
+                            
+                            // אם החלון היה מוסתר לפני הצילום ואנחנו לא ב-alwaysOnTop mode,
+                            // החזר אותו למצב הקודם
+                            if (!wasVisible && !settings.alwaysOnTop) {
+                                // אבל רק לאחר זמן קצר כדי לתת למשתמש לראות שההדבקה הצליחה
+                                setTimeout(() => {
+                                    if (win && !win.isDestroyed()) {
+                                        win.setAlwaysOnTop(settings.alwaysOnTop);
+                                    }
+                                }, 1000);
+                            } else {
+                                // החזר את ההגדרה המקורית של alwaysOnTop
+                                win.setAlwaysOnTop(settings.alwaysOnTop);
+                            }
+                        }
+                        isScreenshotProcessActive = false;
+                    }, 200);
+                } else {
+                    isScreenshotProcessActive = false;
+                }
+            }
+        }, 500);
+    }
+}
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -268,6 +362,7 @@ app.whenReady().then(() => {
 });
 
 app.on('will-quit', () => {
+  isQuitting = true; // <-- הוסף את השורה הזו
   globalShortcut.unregisterAll();
 });
 
@@ -325,6 +420,7 @@ autoUpdater.on('update-downloaded', (info) => {
 autoUpdater.on('error', (err) => {
   sendUpdateStatus('error', { message: err.message });
 });
+
 // ================================================================= //
 // טיפול באירועים (IPC Event Handlers)
 // ================================================================= //
@@ -337,6 +433,12 @@ ipcMain.on('onboarding-complete', () => {
 
 ipcMain.on('canvas-state-changed', (event, isCanvasVisible) => {
     setCanvasMode(isCanvasVisible);
+});
+
+ipcMain.on('update-title', (event, title) => {
+    if (win && !win.isDestroyed()) {
+        win.webContents.send('update-title', title);
+    }
 });
 
 ipcMain.on('show-confirm-reset', () => {
@@ -374,9 +476,11 @@ ipcMain.on('confirm-reset-action', () => {
   });
   console.log('All settings have been reset to default.');
 });
+
 ipcMain.handle('get-settings', async () => {
     return getSettings();
 });
+
 ipcMain.on('update-setting', (event, key, value) => {
     console.log(`Updating setting: ${key} = ${value}`);
     // **התיקון:** לא קוראים ל-getSettings() מחדש.
@@ -409,6 +513,7 @@ ipcMain.on('update-setting', (event, key, value) => {
         }
     });
 });
+
 // פתיחת חלון הגדרות נפרד
 ipcMain.on('open-settings-window', () => {
   if (settingsWin) {
@@ -440,14 +545,24 @@ ipcMain.on('open-settings-window', () => {
     settingsWin = null;
   });
 });
+
 // אירועי עדכון אוטומטי
 autoUpdater.on('update-available', () => {
-  dialog.showMessageBox({ type: 'info', title: 'Update Available', message: 'A new version is available and will be downloaded.', buttons: ['OK'] });
+  dialog.showMessageBox({ 
+    type: 'info', 
+    title: 'Update Available', 
+    message: 'A new version is available and will be downloaded.', 
+    buttons: ['OK'] 
+  });
 });
 
 autoUpdater.on('update-downloaded', () => {
   dialog.showMessageBox({
-    type: 'info', title: 'Update Ready', message: 'Install the new version now?',
+    type: 'info', 
+    title: 'Update Ready', 
+    message: 'Install the new version now?',
     buttons: ['Restart Now', 'Later']
-  }).then(result => { if (result.response === 0) autoUpdater.quitAndInstall() });
+  }).then(result => { 
+    if (result.response === 0) autoUpdater.quitAndInstall(); 
+  });
 });

@@ -18,7 +18,7 @@
   "build": {
     "appId": "com.hillel.geminiapp",
     "productName": "GeminiApp",
-     "artifactName": "${productName}-Setup-${version}.${ext}",
+    "artifactName": "${productName}-Setup-${version}.${ext}",
     "icon": "icon1.png",
     "asar": true,
     "compression": "maximum",
@@ -27,8 +27,8 @@
       "onboarding.html",
       "preload.js",
       "drag.html",
-       "settings.html",
-       "confirm-reset.html",
+      "settings.html",
+      "confirm-reset.html",
       "icon1.png",
       "node_modules/auto-launch",
       "package.json"
@@ -54,11 +54,12 @@
       "runAfterFinish": true,
       "include": "installer.nsh"
     },
-"linux": {
-  "target": ["AppImage"],
-  "category": "Utility",
-  "icon": "icon1.png"
-}
-
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility",
+      "icon": "icon1.png"
+    }
   }
 }

@@ -3,10 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <style>
+    /* הוספת ייבוא הפונט כדי לשמור על אחידות */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+    
     html, body {
       margin: 0;
       padding: 0;
       background: #1e1e1e;
+      font-family: 'Poppins', sans-serif;
+      overflow: hidden; /* מניעת פסי גלילה אפשריים */
     }
     
     .drag-bar {
@@ -15,13 +20,25 @@
       -webkit-app-region: drag;
       background: #1a1a1a;
       user-select: none;
-      /* הוספת Flexbox כדי למקם את הכפתור */
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       align-items: center;
+      padding: 0 10px;
+      box-sizing: border-box;
     }
 
-    /* עיצוב זהה לכפתור מהחלון הקודם */
+    #chat-title {
+      color: #a0a0a0;
+      font-size: 13px;
+      -webkit-app-region: no-drag;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-grow: 1;
+      padding-left: 10px;
+      text-align: left; /* יישור טקסט לשמאל */
+    }
+
     #settings-button {
       -webkit-app-region: no-drag;
       width: 30px;
@@ -35,6 +52,7 @@
       align-items: center;
       justify-content: center;
       transition: color .2s ease, transform .3s ease;
+      flex-shrink: 0;
     }
 
     #settings-button:hover {
@@ -45,17 +63,27 @@
 </head>
 <body>
   <div class="drag-bar">
+    <span id="chat-title">New Chat</span>
     <button id="settings-button" title="Settings">&#9881;</button>
   </div>
 
 <script>
-  // קוד להפעלת הכפתור
-  document.getElementById('settings-button').addEventListener('click', () => {
-    // ודא שה-API זמין לפני הקריאה
-    if (window.electronAPI) {
-      window.electronAPI.openSettingsWindow();
-    }
-  });
+  // קוד להפעלת כפתור ההגדרות
+  if (window.electronAPI) {
+    document.getElementById('settings-button').addEventListener('click', () => {
+        window.electronAPI.openSettingsWindow();
+    });
+  }
+  
+  // סקריפט לעדכון הכותרת
+  if (window.chatAPI) {
+    window.chatAPI.onTitleUpdate((title) => {
+        const titleElement = document.getElementById('chat-title');
+        if (titleElement) {
+            titleElement.textContent = title || 'New Chat';
+        }
+    });
+  }
 </script>
 </body>
 </html>
