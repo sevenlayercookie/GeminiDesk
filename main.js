@@ -200,7 +200,7 @@ if (shortcuts.screenshot) {
                                     if (win && !win.isDestroyed()) {
                                         win.setAlwaysOnTop(settings.alwaysOnTop);
                                     }
-                                }, 1000);
+                                }, 300);
                             } else {
                                 // החזר את ההגדרה המקורית של alwaysOnTop
                                 win.setAlwaysOnTop(settings.alwaysOnTop);
@@ -482,7 +482,6 @@ ipcMain.handle('get-settings', async () => {
 });
 
 ipcMain.on('update-setting', (event, key, value) => {
-    console.log(`Updating setting: ${key} = ${value}`);
     // **התיקון:** לא קוראים ל-getSettings() מחדש.
     // אנחנו משנים ישירות את אובייקט ההגדרות הגלובלי שקיים בזיכרון.
 
