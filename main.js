@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, dialog, screen } = require('electron');
+const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, dialog, screen, shell, session } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -20,12 +20,134 @@ const defaultSettings = {
     showHide: 'Alt+G',
     quit: 'Alt+Q',
     showInstructions: 'Alt+I',
-    screenshot: 'Control+Alt+S' 
+    screenshot: 'Control+Alt+S',
+    newChatPro: 'Alt+P',
+    newChatFlash: 'Alt+F'
   },
+lastUpdateCheck: 0,
+microphoneGranted: null,
   theme: 'dark'
 };
+function scheduleDailyUpdateCheck() {
+  const checkForUpdates = () => {
+    const now = new Date().getTime();
+    const oneDay = 24 * 60 * 60 * 1000; // Milliseconds in a day
 
-// פונקציה לקריאת ההגדרות
+    // Check if more than a day has passed since the last check
+    if (!settings.lastUpdateCheck || (now - settings.lastUpdateCheck > oneDay)) {
+      console.log('Checking for updates...');
+      autoUpdater.checkForUpdates();
+      
+      // Update the last check time and save it
+      settings.lastUpdateCheck = now;
+      saveSettings(settings);
+    } else {
+      console.log('Update check skipped, less than 24 hours since last check.');
+    }
+  };
+
+  // Check immediately on startup
+  checkForUpdates();
+  
+  // And then check again every 6 hours to see if a day has passed
+  setInterval(checkForUpdates, 6 * 60 * 60 * 1000); 
+}
+function createNewChatWithModel(modelType) {
+  if (!win || win.isDestroyed() || !view) return;
+
+  if (!win.isVisible()) win.show();
+  if (win.isMinimized()) win.restore();
+  win.focus();
+
+  // Determine the index based on the model type: 0 for Flash (first), 1 for Pro (second)
+  const modelIndex = modelType.toLowerCase() === 'flash' ? 0 : 1;
+
+  const script = `
+    (async function() {
+      console.log('--- GeminiDesk: Starting script v7 (with correct selector) ---');
+      
+      // Helper function to wait for an element to be ready (exists and is not disabled)
+      const waitForElement = (selector, timeout = 3000) => {
+        console.log(\`Waiting for an active element: \${selector}\`);
+        return new Promise((resolve, reject) => {
+          const timer = setInterval(() => {
+            const element = document.querySelector(selector);
+            if (element && !element.disabled) {
+              clearInterval(timer);
+              console.log(\`Found active element: \${selector}\`);
+              resolve(element);
+            }
+          }, 100);
+          setTimeout(() => {
+            clearInterval(timer);
+            console.warn('GeminiDesk Warn: Timeout. Could not find an active element for:', selector);
+            reject(new Error('Element not found or disabled: ' + selector));
+          }, timeout);
+        });
+      };
+
+      // Helper function to simulate a more realistic user click
+      const simulateClick = (element) => {
+        console.log('Simulating a click on:', element);
+        const mousedownEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
+        const mouseupEvent = new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window });
+        const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+        element.dispatchEvent(mousedownEvent);
+        element.dispatchEvent(mouseupEvent);
+        element.dispatchEvent(clickEvent);
+      };
+
+      try {
+        let modelSwitcher;
+        try {
+          // Attempt #1: Directly open the model menu (the fast method)
+          console.log('GeminiDesk: Attempt #1 - Direct model menu opening.');
+          // *** The critical fix is here ***
+          modelSwitcher = await waitForElement('[data-test-id="bard-mode-menu-button"]');
+        } catch (e) {
+          // Attempt #2 (Fallback): If the direct method fails, click "New Chat" to reset the UI
+          console.log('GeminiDesk: Attempt #1 failed. Falling back to plan B - clicking "New Chat".');
+          const newChatButton = await waitForElement('[data-test-id="new-chat-button"] button', 5000);
+          simulateClick(newChatButton);
+          console.log('GeminiDesk: Clicked "New Chat", waiting for UI to stabilize...');
+          await new Promise(resolve => setTimeout(resolve, 500)); // A longer wait after UI reset
+          // *** The critical fix is here ***
+          modelSwitcher = await waitForElement('[data-test-id="bard-mode-menu-button"]', 5000);
+        }
+        
+        simulateClick(modelSwitcher);
+        console.log('GeminiDesk: Clicked model switcher dropdown.');
+
+        // Final step: Select the model from the list by its position
+        const menuPanel = await waitForElement('mat-bottom-sheet-container, .mat-mdc-menu-panel', 5000);
+        console.log('GeminiDesk: Found model panel. Selecting by index...');
+        
+        const modelIndexToSelect = ${modelIndex};
+        console.log(\`Target index: \${modelIndexToSelect}\`);
+        
+        const items = menuPanel.querySelectorAll('button.mat-mdc-menu-item.bard-mode-list-button');
+        console.log(\`Found \${items.length} models in the menu.\`);
+        
+        if (items.length > modelIndexToSelect) {
+          const targetButton = items[modelIndexToSelect];
+          console.log('Target button:', targetButton.textContent.trim());
+          await new Promise(resolve => setTimeout(resolve, 150));
+          simulateClick(targetButton);
+          console.log('GeminiDesk: Success! Clicked model at index:', modelIndexToSelect);
+        } else {
+          console.error(\`GeminiDesk Error: Could not find a model at index \${modelIndexToSelect}\`);
+          document.body.click(); // Attempt to close the menu
+        }
+
+      } catch (error) {
+        console.error('GeminiDesk Error: The entire process failed.', error);
+      }
+      console.log('--- GeminiDesk: Script v7 finished ---');
+    })();
+  `;
+
+  view.webContents.executeJavaScript(script).catch(console.error);
+}
 function getSettings() {
   try {
     if (fs.existsSync(settingsPath)) {
@@ -102,7 +224,13 @@ function registerShortcuts() {
             win.isVisible() ? win.hide() : win.show();
         });
     }
+    if (shortcuts.newChatPro) {
+        globalShortcut.register(shortcuts.newChatPro, () => createNewChatWithModel('Pro'));
+    }
 
+    if (shortcuts.newChatFlash) {
+        globalShortcut.register(shortcuts.newChatFlash, () => createNewChatWithModel('Flash'));
+    }
     if (shortcuts.quit) {
         globalShortcut.register(shortcuts.quit, () => {
             if (win) win.destroy();
@@ -252,11 +380,13 @@ function loadGemini() {
   win.loadFile('drag.html');
 
   if (!view) {
-    view = new BrowserView({
+view = new BrowserView({
       webPreferences: {
         partition: 'persist:gemini-session',
         preload: path.join(__dirname, 'preload.js'),
-        contextIsolation: true
+        contextIsolation: true,
+        // ✅ הוסף את השורה הבאה
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
       }
     });
 
@@ -267,7 +397,6 @@ function loadGemini() {
     });
 
     view.webContents.loadURL('https://gemini.google.com/app');
-
     view.webContents.on('did-finish-load', () => {
         const checkerScript = `
             let isCanvasVisible = false;
@@ -356,9 +485,22 @@ function animateResize(targetBounds, duration_ms = 200) {
 
 app.whenReady().then(() => {
   createWindow();
+const ses = session.defaultSession;
+  ses.setPermissionRequestHandler((webContents, permission, callback) => {
+    // We will check for the 'media' permission which includes the microphone.
+    if (permission === 'media') {
+      // Automatically grant the permission every time without asking the user.
+      // This is simpler and more reliable for fixing intermittent issues.
+      callback(true);
+    } else {
+      // For any other permission request, deny it for security.
+      callback(false);
+    }
+  });
   registerShortcuts();
   if (settings.autoStart) setAutoLaunch(true);
-  autoUpdater.checkForUpdatesAndNotify();
+autoUpdater.autoDownload = false;
+scheduleDailyUpdateCheck();
 });
 
 app.on('will-quit', () => {
@@ -394,7 +536,18 @@ autoUpdater.on('update-not-available', (info) => {
 
 autoUpdater.on('update-available', (info) => {
   sendUpdateStatus('available');
-  // ההורדה תתחיל אוטומטית
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Available',
+    message: `A new version (${info.version}) is available. Would you like to open the download page?`,
+    buttons: ['Yes, open page', 'Later']
+  }).then((buttonIndex) => {
+    if (buttonIndex.response === 0) {
+      // This will open the latest release page on GitHub in the user's default browser.
+      const repoUrl = `https://github.com/hillelkingqt/GeminiDesk/releases/latest`;
+      shell.openExternal(repoUrl);
+    }
+  });
 });
 
 autoUpdater.on('download-progress', (progressObj) => {

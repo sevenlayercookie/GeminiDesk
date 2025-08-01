@@ -1,6 +1,6 @@
 {
   "name": "gemini-app",
-  "version": "2.6.0",
+  "version": "3.0.0",
   "description": "Gemini Desktop Wrapper",
   "main": "main.js",
   "scripts": {
