@@ -25,7 +25,7 @@
             padding: 0 15px; box-sizing: border-box; border-bottom: 1px solid var(--border-color);
         }
 
-        .drag-bar h2 { font-size: 16px; margin: 0; font-weight: 500; color: var(--text-primary); -webkit-app-region: no-drag; }
+        .drag-bar h2 { font-size: 16px; margin: 0; font-weight: 500; color: var(--text-primary); -webkit-app-region: drag; }
 
         #close-button {
             -webkit-app-region: no-drag; font-size: 22px; background: none; border: none;
@@ -123,6 +123,10 @@
                 Shortcuts
             </h3>
             <div class="setting-item"><div class="setting-label"><strong>Show / Hide Window</strong><span>Toggle window visibility.</span></div><button class="record-button" data-key="showHide"></button></div>
+  <div class="setting-item">
+        <div class="setting-label"><strong>Open New Window</strong><span>Creates a new, separate window.</span></div>
+        <button class="record-button" data-key="newWindow"></button>
+    </div>
             <div class="setting-item"><div class="setting-label"><strong>Quit Application</strong><span>Close the application.</span></div><button class="record-button" data-key="quit"></button></div>
             <div class="setting-item"><div class="setting-label"><strong>Show Instructions</strong><span>See the welcome screen.</span></div><button class="record-button" data-key="showInstructions"></button></div>
 <div class="setting-item">

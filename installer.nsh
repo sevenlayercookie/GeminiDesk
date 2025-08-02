@@ -1,11 +1,11 @@
 !macro customInstall
-  ; MessageBox MB_YESNO|MB_ICONQUESTION "Do you want to run Gemini at system startup?"
-  ; IDYES autoStart
+  ; כתיבת context-menu עבור כל הקבצים (*)
+  WriteRegStr HKCR "*\shell\GeminiApp" "" "Open with GeminiApp"
+  WriteRegStr HKCR "*\shell\GeminiApp" "Icon" "$INSTDIR\\GeminiApp.exe,0"
+  WriteRegStr HKCR "*\shell\GeminiApp\\command" "" '"$INSTDIR\\GeminiApp.exe" "%1"'
+!macroend
 
-  ; Goto skipAutoStart
-
-  ; autoStart:
-  ;   WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Run" "GeminiApp" "$INSTDIR\\GeminiApp.exe"
-
-  ; skipAutoStart:
+!macro customUninstall
+  ; הסרה נקייה בעת uninstall
+  DeleteRegKey HKCR "*\shell\GeminiApp"
 !macroend

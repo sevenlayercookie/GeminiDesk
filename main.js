@@ -11,7 +11,6 @@ let isQuitting = false;
 // ================================================================= //
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settingsWin = null;
-// הגדרות ברירת מחדל
 const defaultSettings = {
   onboardingShown: false,
   autoStart: true,
@@ -22,7 +21,8 @@ const defaultSettings = {
     showInstructions: 'Alt+I',
     screenshot: 'Control+Alt+S',
     newChatPro: 'Alt+P',
-    newChatFlash: 'Alt+F'
+    newChatFlash: 'Alt+F',
+      newWindow: 'Alt+N'
   },
 lastUpdateCheck: 0,
 microphoneGranted: null,
@@ -53,18 +53,21 @@ function scheduleDailyUpdateCheck() {
   setInterval(checkForUpdates, 6 * 60 * 60 * 1000); 
 }
 function createNewChatWithModel(modelType) {
-  if (!win || win.isDestroyed() || !view) return;
+  // קבל את החלון והתצוגה הפעילים כרגע
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  if (!focusedWindow) return;
+  const targetView = focusedWindow.getBrowserView();
+  if (!targetView) return;
 
-  if (!win.isVisible()) win.show();
-  if (win.isMinimized()) win.restore();
-  win.focus();
+  if (!focusedWindow.isVisible()) focusedWindow.show();
+  if (focusedWindow.isMinimized()) focusedWindow.restore();
+  focusedWindow.focus();
 
-  // Determine the index based on the model type: 0 for Flash (first), 1 for Pro (second)
   const modelIndex = modelType.toLowerCase() === 'flash' ? 0 : 1;
 
   const script = `
     (async function() {
-      console.log('--- GeminiDesk: Starting script v7 (with correct selector) ---');
+      console.log('--- GeminiDesk: Starting script v7 ---');
       
       // Helper function to wait for an element to be ready (exists and is not disabled)
       const waitForElement = (selector, timeout = 3000) => {
@@ -86,7 +89,7 @@ function createNewChatWithModel(modelType) {
         });
       };
 
-      // Helper function to simulate a more realistic user click
+      // Helper function to simulate a realistic user click
       const simulateClick = (element) => {
         console.log('Simulating a click on:', element);
         const mousedownEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
@@ -102,7 +105,6 @@ function createNewChatWithModel(modelType) {
         try {
           // Attempt #1: Directly open the model menu (the fast method)
           console.log('GeminiDesk: Attempt #1 - Direct model menu opening.');
-          // *** The critical fix is here ***
           modelSwitcher = await waitForElement('[data-test-id="bard-mode-menu-button"]');
         } catch (e) {
           // Attempt #2 (Fallback): If the direct method fails, click "New Chat" to reset the UI
@@ -111,7 +113,6 @@ function createNewChatWithModel(modelType) {
           simulateClick(newChatButton);
           console.log('GeminiDesk: Clicked "New Chat", waiting for UI to stabilize...');
           await new Promise(resolve => setTimeout(resolve, 500)); // A longer wait after UI reset
-          // *** The critical fix is here ***
           modelSwitcher = await waitForElement('[data-test-id="bard-mode-menu-button"]', 5000);
         }
         
@@ -146,13 +147,12 @@ function createNewChatWithModel(modelType) {
     })();
   `;
 
-  view.webContents.executeJavaScript(script).catch(console.error);
+  targetView.webContents.executeJavaScript(script).catch(console.error);
 }
 function getSettings() {
   try {
     if (fs.existsSync(settingsPath)) {
       const savedSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      // מיזוג עם הגדרות ברירת המחדל כדי להבטיח שכל המפתחות קיימים
       return { ...defaultSettings, ...savedSettings, shortcuts: { ...defaultSettings.shortcuts, ...savedSettings.shortcuts } };
     }
   } catch (e) {
@@ -161,7 +161,6 @@ function getSettings() {
   return defaultSettings;
 }
 
-// פונקציה לשמירת ההגדרות
 function saveSettings(settings) {
   try {
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
@@ -182,7 +181,7 @@ const margin = 20;
 const originalSize = { width: 500, height: 650 };
 const canvasSize = { width: 1400, height: 800 };
 let isCanvasActive = false;
-
+const detachedViews = new Map();
 
 // ================================================================= //
 // פונקציות ניהול האפליקציה
@@ -195,8 +194,8 @@ function setAutoLaunch(shouldEnable) {
   }
 
   const appName = 'GeminiApp';
-  const appPath = `"${app.getPath('exe')}"`; // הנתיב עטוף במרכאות - זה התיקון!
-  const regKey = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
+  const appPath = `"${app.getPath('exe')}"`; 
+   const regKey = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 
   try {
     if (shouldEnable) {
@@ -217,13 +216,28 @@ function registerShortcuts() {
 
     const shortcuts = settings.shortcuts;
 
-    // הרשמה מחדש עם הקיצורים המעודכנים
+    // ================================================================= //
+    // תיקון מס' 1: הסתר/הצג את כל החלונות ביחד
+    // ================================================================= //
     if (shortcuts.showHide) {
         globalShortcut.register(shortcuts.showHide, () => {
-            if (!win) return;
-            win.isVisible() ? win.hide() : win.show();
+            const allWindows = BrowserWindow.getAllWindows();
+            if (allWindows.length === 0) return;
+
+            // בדוק את מצב הנראות של החלון הראשון
+            const shouldShow = !allWindows[0].isVisible();
+
+            // החל את הפעולה על כל החלונות
+            allWindows.forEach(win => {
+                if (shouldShow) {
+                    win.show();
+                } else {
+                    win.hide();
+                }
+            });
         });
     }
+
     if (shortcuts.newChatPro) {
         globalShortcut.register(shortcuts.newChatPro, () => createNewChatWithModel('Pro'));
     }
@@ -231,122 +245,120 @@ function registerShortcuts() {
     if (shortcuts.newChatFlash) {
         globalShortcut.register(shortcuts.newChatFlash, () => createNewChatWithModel('Flash'));
     }
+
     if (shortcuts.quit) {
         globalShortcut.register(shortcuts.quit, () => {
-            if (win) win.destroy();
-            app.quit();
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+                focusedWindow.close();
+            }
         });
     }
 
     if (shortcuts.showInstructions) {
         globalShortcut.register(shortcuts.showInstructions, () => {
-            if (win && win.getBrowserView()) {
-                win.removeBrowserView(view);
-                win.loadFile('onboarding.html');
-                setCanvasMode(false);
-            } else if (win) {
-                 win.loadFile('onboarding.html');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow && !focusedWindow.isDestroyed()) {
+                const view = focusedWindow.getBrowserView();
+                if (view) {
+                    // נתק את התצוגה מהחלון ושמור אותה בצד
+                    focusedWindow.removeBrowserView(view);
+                    detachedViews.set(focusedWindow, view); 
+                }
+                focusedWindow.loadFile('onboarding.html');
+                setCanvasMode(false, focusedWindow); 
             }
         });
     }
 
-if (shortcuts.screenshot) {
-    let isScreenshotProcessActive = false;
+    if (shortcuts.screenshot) {
+        // ... (הקוד של צילום המסך נשאר ללא שינוי) ...
+        // (השאר את הלוגיקה הקיימת של צילום המסך כפי שהיא)
+        let isScreenshotProcessActive = false;
 
-    globalShortcut.register(shortcuts.screenshot, () => {
-        if (isQuitting || isScreenshotProcessActive) {
-            return;
-        }
-        isScreenshotProcessActive = true;
-
-        if (!win || win.isDestroyed()) {
-            createWindow();
-            win.once('ready-to-show', () => {
-                proceedWithScreenshot();
-            });
-        } else {
-            proceedWithScreenshot();
-        }
-    });
-
-    function proceedWithScreenshot() {
-        clipboard.clear();
-
-        // שמור את מצב הנראות הנוכחי של החלון
-        const wasVisible = win.isVisible();
-        
-        const snippingTool = spawn('explorer', ['ms-screenclip:'], {
-            detached: true,
-            stdio: 'ignore'
-        });
-        snippingTool.unref();
-
-        snippingTool.on('error', (err) => {
-            console.error('Failed to start snipping tool:', err);
-            isScreenshotProcessActive = false;
-        });
-
-        let checkAttempts = 0;
-        const maxAttempts = 60;
-        const intervalId = setInterval(() => {
-            if (checkAttempts++ > maxAttempts || (!win || win.isDestroyed())) {
-                clearInterval(intervalId);
-                isScreenshotProcessActive = false;
+        globalShortcut.register(shortcuts.screenshot, () => {
+            if (isQuitting || isScreenshotProcessActive) {
                 return;
             }
-            
-            const image = clipboard.readImage();
-            if (!image.isEmpty()) {
-                clearInterval(intervalId);
+            isScreenshotProcessActive = true;
 
-                if (win && !win.isDestroyed()) {
-                    // הבא את החלון לחזית ותן לו פוקוס
-                    if (!win.isVisible()) {
-                        win.show(); 
-                    }
-                    if (win.isMinimized()) {
-                        win.restore(); 
-                    }
-                    
-                    // הבטח שהחלון יישאר בראש
-                    win.setAlwaysOnTop(true);
-                    win.focus();
-                    win.moveTop(); // הוסף שורה זו - מבטיח שהחלון יהיה בחלק העליון של Z-order
-
-                    // המתן קצת כדי להבטיח שהחלון באמת בפוקוס
-                    setTimeout(() => {
-                        if (win && !win.isDestroyed() && view && view.webContents) {
-                            view.webContents.focus();
-                            view.webContents.paste();
-                            console.log('Screenshot pasted from clipboard!');
-                            
-                            // אם החלון היה מוסתר לפני הצילום ואנחנו לא ב-alwaysOnTop mode,
-                            // החזר אותו למצב הקודם
-                            if (!wasVisible && !settings.alwaysOnTop) {
-                                // אבל רק לאחר זמן קצר כדי לתת למשתמש לראות שההדבקה הצליחה
-                                setTimeout(() => {
-                                    if (win && !win.isDestroyed()) {
-                                        win.setAlwaysOnTop(settings.alwaysOnTop);
-                                    }
-                                }, 300);
-                            } else {
-                                // החזר את ההגדרה המקורית של alwaysOnTop
-                                win.setAlwaysOnTop(settings.alwaysOnTop);
-                            }
-                        }
-                        isScreenshotProcessActive = false;
-                    }, 200);
-                } else {
-                    isScreenshotProcessActive = false;
-                }
+            // השתמש בחלון הפעיל או צור אחד חדש
+            let targetWin = BrowserWindow.getFocusedWindow();
+            if (!targetWin) {
+                createWindow();
+                // המתן עד שהחלון החדש יהיה מוכן
+                targetWin = BrowserWindow.getAllWindows().pop();
+                targetWin.once('ready-to-show', () => {
+                    proceedWithScreenshot(targetWin);
+                });
+            } else {
+                proceedWithScreenshot(targetWin);
             }
-        }, 500);
+        });
+
+        function proceedWithScreenshot(winInstance) {
+            clipboard.clear();
+            const wasVisible = winInstance.isVisible();
+            const snippingTool = spawn('explorer', ['ms-screenclip:'], { detached: true, stdio: 'ignore' });
+            snippingTool.unref();
+            snippingTool.on('error', (err) => {
+                console.error('Failed to start snipping tool:', err);
+                isScreenshotProcessActive = false;
+            });
+            let checkAttempts = 0;
+            const maxAttempts = 60;
+            const intervalId = setInterval(() => {
+                if (checkAttempts++ > maxAttempts || (!winInstance || winInstance.isDestroyed())) {
+                    clearInterval(intervalId);
+                    isScreenshotProcessActive = false;
+                    return;
+                }
+                const image = clipboard.readImage();
+                if (!image.isEmpty()) {
+                    clearInterval(intervalId);
+                    if (winInstance && !winInstance.isDestroyed()) {
+                        if (!winInstance.isVisible()) winInstance.show();
+                        if (winInstance.isMinimized()) winInstance.restore();
+                        winInstance.setAlwaysOnTop(true);
+                        winInstance.focus();
+                        winInstance.moveTop();
+setTimeout(() => {
+    const viewInstance = winInstance.getBrowserView();
+    if (winInstance && !winInstance.isDestroyed() && viewInstance && viewInstance.webContents) {
+        viewInstance.webContents.focus();
+        viewInstance.webContents.paste();
+        console.log('Screenshot pasted from clipboard!');
+
+        // החזר את הגדרת "תמיד למעלה" למצבה המקורי
+        winInstance.setAlwaysOnTop(settings.alwaysOnTop);
+
+        // התיקון: הוספת השהיה קצרה כדי לתת ל-Windows להגיב
+        setTimeout(() => {
+            if (winInstance && !winInstance.isDestroyed()) {
+                winInstance.focus();
+                winInstance.moveTop();
+            }
+        }, 50); // השהיה קצרצרה של 50 מילישניות
+    }
+    isScreenshotProcessActive = false;
+}, 200);
+                    } else {
+                        isScreenshotProcessActive = false;
+                    }
+                }
+            }, 500);
+        }
+    }
+
+    // הוספת הקיצור לחלון חדש
+    if (shortcuts.newWindow) {
+        globalShortcut.register(shortcuts.newWindow, () => {
+            createWindow();
+        });
     }
 }
-}
-
 function createWindow() {
-  win = new BrowserWindow({
+  const newWin = new BrowserWindow({
     width: originalSize.width,
     height: originalSize.height,
     frame: false,
@@ -360,78 +372,72 @@ function createWindow() {
     }
   });
 
-  win.on('blur', () => {
-    if(settings.alwaysOnTop) win.setAlwaysOnTop(true);
+  newWin.on('blur', () => {
+    if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
   });
   
-  win.on('focus', () => {
-    if(settings.alwaysOnTop) win.setAlwaysOnTop(true);
+  newWin.on('focus', () => {
+    if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
   });
 
+  newWin.on('closed', () => {
+    detachedViews.delete(newWin);
+  });
+
+  // עדיין נעדכן את המשתנה הגלובלי 'win' באופן זמני לצורך תאימות לאחור
+  win = newWin;
+
   if (!settings.onboardingShown) {
-    win.loadFile('onboarding.html');
+    newWin.loadFile('onboarding.html');
   } else {
-    loadGemini();
+    // קריאה לגרסה החדשה של הפונקציה עם החלון הספציפי
+    loadGemini(newWin);
   }
 }
+function loadGemini(targetWin) {
+  if (!targetWin || targetWin.isDestroyed()) return;
+  targetWin.loadFile('drag.html');
 
-function loadGemini() {
-  if (!win) return;
-  win.loadFile('drag.html');
-
-  if (!view) {
-view = new BrowserView({
+  const newView = new BrowserView({
       webPreferences: {
         partition: 'persist:gemini-session',
         preload: path.join(__dirname, 'preload.js'),
         contextIsolation: true,
-        // ✅ הוסף את השורה הבאה
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
       }
     });
 
-    view.webContents.on('will-navigate', (event, url) => {
+    newView.webContents.on('will-navigate', (event, url) => {
       if (url.startsWith('file://')) {
         event.preventDefault();
       }
     });
 
-    view.webContents.loadURL('https://gemini.google.com/app');
-    view.webContents.on('did-finish-load', () => {
-        const checkerScript = `
-            let isCanvasVisible = false;
-            setInterval(() => {
-                const canvasElement = document.querySelector('immersive-panel');
-                const currentlyVisible = canvasElement !== null;
-                if (currentlyVisible !== isCanvasVisible) {
-                    isCanvasVisible = currentlyVisible;
-                    window.electronAPI.notifyCanvasState(isCanvasVisible);
-                }
-            }, 1000);
-        `;
-        view.webContents.executeJavaScript(checkerScript).catch(console.error);
-    });
-  }
+    newView.webContents.loadURL('https://gemini.google.com/app');
 
-  win.setBrowserView(view);
-  const bounds = win.getBounds();
-  view.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
-  view.setAutoResize({ width: true, height: true });
+  targetWin.setBrowserView(newView);
+  const bounds = targetWin.getBounds();
+  newView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
+  newView.setAutoResize({ width: true, height: true });
 }
-
 // ================================================================= //
 // פונקציות אנימציה ושינוי גודל (ללא שינוי מהמקור)
 // ================================================================= //
 
-async function setCanvasMode(isCanvas) {
-  if (!win || isCanvas === isCanvasActive) return;
+async function setCanvasMode(isCanvas, targetWin = null) {
+  const activeWin = targetWin || BrowserWindow.getFocusedWindow();
+  if (!activeWin || isCanvas === isCanvasActive) return;
+
+  const activeView = activeWin.getBrowserView();
+  if (!activeView) return;
+
   isCanvasActive = isCanvas;
-  const currentBounds = win.getBounds();
-  if (win.isMinimized()) win.restore();
+  const currentBounds = activeWin.getBounds();
+  if (activeWin.isMinimized()) activeWin.restore();
 
   let scrollY = 0;
   try {
-    scrollY = await view.webContents.executeJavaScript(`(document.scrollingElement || document.documentElement).scrollTop`);
+    scrollY = await activeView.webContents.executeJavaScript(`(document.scrollingElement || document.documentElement).scrollTop`);
   } catch (e) { console.error('Could not read scroll position:', e); }
 
   if (isCanvas) {
@@ -442,23 +448,26 @@ async function setCanvasMode(isCanvas) {
     const targetHeight = Math.min(canvasSize.height, workArea.height - margin * 2);
     const newX = Math.max(workArea.x + margin, Math.min(currentBounds.x, workArea.x + workArea.width  - targetWidth  - margin));
     const newY = Math.max(workArea.y + margin, Math.min(currentBounds.y, workArea.y + workArea.height - targetHeight - margin));
-    animateResize({ x: newX, y: newY, width: targetWidth, height: targetHeight });
+    animateResize({ x: newX, y: newY, width: targetWidth, height: targetHeight }, activeWin, activeView);
   } else {
     if (prevBounds) {
-      animateResize(prevBounds);
+      animateResize(prevBounds, activeWin, activeView);
       prevBounds = null;
     } else {
-      animateResize({ ...originalSize, x: currentBounds.x, y: currentBounds.y });
-      win.center();
+      animateResize({ ...originalSize, x: currentBounds.x, y: currentBounds.y }, activeWin, activeView);
+      activeWin.center();
     }
   }
   setTimeout(() => {
-    view.webContents.executeJavaScript(`(document.scrollingElement || document.documentElement).scrollTop = ${scrollY};`).catch(console.error);
+    if (activeView && activeView.webContents) {
+      activeView.webContents.executeJavaScript(`(document.scrollingElement || document.documentElement).scrollTop = ${scrollY};`).catch(console.error);
+    }
   }, 300);
 }
+function animateResize(targetBounds, activeWin, activeView, duration_ms = 200) {
+  if (!activeWin || !activeView) return; // הגנה נוספת
 
-function animateResize(targetBounds, duration_ms = 200) {
-  const start = win.getBounds();
+  const start = activeWin.getBounds();
   const steps = 20;
   const interval = duration_ms / steps;
   const delta = {
@@ -472,11 +481,106 @@ function animateResize(targetBounds, duration_ms = 200) {
       x: Math.round(start.x + delta.x * i), y: Math.round(start.y + delta.y * i),
       width: Math.round(start.width + delta.width * i), height: Math.round(start.height + delta.height * i)
     };
-    win.setBounds(b);
-    if (view) view.setBounds({ x:0, y:30, width:b.width, height:b.height-30 });
-    if (i < steps) setTimeout(step, interval);
+    if (activeWin && !activeWin.isDestroyed()) {
+      activeWin.setBounds(b);
+      activeView.setBounds({ x:0, y:30, width:b.width, height:b.height-30 });
+      if (i < steps) setTimeout(step, interval);
+    }
   }
   step();
+}
+// ================================================================= //
+// טיפול בקבצים שנשלחים מהתפריט הימני ונעילת מופע יחיד
+// ================================================================= //
+
+let filePathToProcess = null;
+
+// Handle file path argument if the app is opened with a file
+if (process.argv.length >= 2 && !process.argv[0].includes('electron')) {
+    const potentialPath = process.argv[1];
+    if (fs.existsSync(potentialPath)) {
+        filePathToProcess = potentialPath;
+    }
+}
+
+// Single instance lock to prevent multiple app windows
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+    app.quit();
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Someone tried to run a second instance. Focus our window and handle the file.
+        if (win) {
+            if (win.isMinimized()) win.restore();
+            win.focus();
+
+            // Check for a file path in the command line of the second instance
+            const potentialPath = commandLine.find(arg => fs.existsSync(arg));
+            if (potentialPath) {
+                handleFileOpen(potentialPath);
+            }
+        }
+    });
+}
+
+function handleFileOpen(filePath) {
+    if (!win || !view) {
+        // If the window isn't ready yet, store the path to process later
+        filePathToProcess = filePath;
+        return;
+    }
+
+    try {
+        // Bring the window to the front and give it focus
+        if (!win.isVisible()) win.show();
+        if (win.isMinimized()) win.restore();
+        win.setAlwaysOnTop(true); // Temporarily bring to front to ensure it gets focus
+        win.focus();
+        win.moveTop();
+
+        // Check file type to handle images and other files correctly
+        const ext = path.extname(filePath).toLowerCase();
+        if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].includes(ext)) {
+            const image = nativeImage.createFromPath(filePath);
+            clipboard.writeImage(image);
+        } else {
+            // For other files (PDF, TXT, etc.), we put the file on the clipboard
+            // This mimics the "Copy" action in the file explorer.
+            // Note: This works reliably on Windows. macOS/Linux support can vary.
+            if (process.platform === 'win32') {
+                const command = `Set-Clipboard -Path "${filePath.replace(/"/g, '""')}"`;
+                spawn('powershell.exe', ['-Command', command]);
+            } else {
+                 // On macOS and Linux, we use the standard clipboard API which might be less reliable for files
+                clipboard.write({ text: filePath });
+            }
+        }
+
+        // Give the OS a moment to process the clipboard command
+        setTimeout(() => {
+            if (win && !win.isDestroyed() && view && view.webContents) {
+                view.webContents.focus();
+                view.webContents.paste();
+                console.log('Pasting file from clipboard:', filePath);
+
+                // Restore the original alwaysOnTop setting after a moment
+                setTimeout(() => {
+                    if (win && !win.isDestroyed()) {
+                       win.setAlwaysOnTop(settings.alwaysOnTop);
+                    }
+                }, 200);
+            }
+            filePathToProcess = null; // Clear the path after processing
+        }, 300); // A slightly longer delay for file system operations
+
+    } catch (error) {
+        console.error('Failed to process file for pasting:', error);
+        dialog.showErrorBox('File Error', 'Could not copy the selected file to the clipboard.');
+        if (win) { // Restore alwaysOnTop setting even on error
+            win.setAlwaysOnTop(settings.alwaysOnTop);
+        }
+    }
 }
 
 // ================================================================= //
@@ -501,6 +605,16 @@ const ses = session.defaultSession;
   if (settings.autoStart) setAutoLaunch(true);
 autoUpdater.autoDownload = false;
 scheduleDailyUpdateCheck();
+// If the app was opened with a file, handle it now
+    if (filePathToProcess) {
+        // We need to wait until the Gemini page is fully loaded
+        view.webContents.once('did-finish-load', () => {
+             // A small extra delay to ensure all scripts on the page have run
+            setTimeout(() => {
+                handleFileOpen(filePathToProcess);
+            }, 1000);
+        });
+    }
 });
 
 app.on('will-quit', () => {
@@ -577,11 +691,33 @@ autoUpdater.on('error', (err) => {
 // ================================================================= //
 // טיפול באירועים (IPC Event Handlers)
 // ================================================================= //
-
-ipcMain.on('onboarding-complete', () => {
+ipcMain.on('open-new-window', () => {
+  createWindow();
+});
+ipcMain.on('onboarding-complete', (event) => {
   settings.onboardingShown = true;
   saveSettings(settings);
-  loadGemini();
+  
+  const senderWindow = BrowserWindow.fromWebContents(event.sender);
+  
+  if (senderWindow && !senderWindow.isDestroyed()) {
+    const existingView = detachedViews.get(senderWindow);
+    
+    if (existingView) {
+      // התיקון: טען מחדש את הסרגל העליון לפני החזרת התצוגה
+      senderWindow.loadFile('drag.html').then(() => {
+        // לאחר שהסרגל נטען, החזר את התצוגה של ג'מיני
+        senderWindow.setBrowserView(existingView);
+        const bounds = senderWindow.getBounds();
+        existingView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
+        detachedViews.delete(senderWindow);
+      }).catch(err => console.error('Failed to reload drag.html:', err));
+    } else {
+      // במקרה של הפעלה ראשונה, טען כרגיל
+      win = senderWindow;
+      loadGemini();
+    }
+  }
 });
 
 ipcMain.on('canvas-state-changed', (event, isCanvasVisible) => {
@@ -589,8 +725,17 @@ ipcMain.on('canvas-state-changed', (event, isCanvasVisible) => {
 });
 
 ipcMain.on('update-title', (event, title) => {
-    if (win && !win.isDestroyed()) {
-        win.webContents.send('update-title', title);
+    const senderWebContents = event.sender;
+    const allWindows = BrowserWindow.getAllWindows();
+
+    for (const window of allWindows) {
+        const view = window.getBrowserView();
+        if (view && view.webContents.id === senderWebContents.id) {
+            if (!window.isDestroyed()) {
+                window.webContents.send('update-title', title);
+            }
+            break; 
+        }
     }
 });
 
@@ -666,23 +811,24 @@ ipcMain.on('update-setting', (event, key, value) => {
     });
 });
 
-// פתיחת חלון הגדרות נפרד
-ipcMain.on('open-settings-window', () => {
+ipcMain.on('open-settings-window', (event) => { // הוספנו את המילה event
   if (settingsWin) {
     settingsWin.focus();
     return;
   }
+
+  // זיהוי החלון שממנו נשלחה הבקשה
+  const parentWindow = BrowserWindow.fromWebContents(event.sender);
 
   settingsWin = new BrowserWindow({
     width: 450,
     height: 580,
     resizable: false,
     frame: false,
-    parent: win, // קושר את החלון לחלון הראשי
-    modal: true, // מונע אינטראקציה עם החלון הראשי עד סגירת ההגדרות
-    show: false, // מנע הבהוב, הצג רק כשהוא מוכן
+    parent: parentWindow, // שימוש בחלון האב הנכון
+    show: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'), // חשוב מאוד!
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
     }
   });
@@ -697,7 +843,6 @@ ipcMain.on('open-settings-window', () => {
     settingsWin = null;
   });
 });
-
 // אירועי עדכון אוטומטי
 autoUpdater.on('update-available', () => {
   dialog.showMessageBox({ 

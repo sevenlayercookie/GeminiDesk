@@ -5,20 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to GeminiDesk</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
-        
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        * {
+    box-sizing: border-box;
+}
         :root {
-            --bg-primary: #1a1d21;
-            --bg-secondary: #282a2e;
-            --bg-tertiary: #101214;
+            --bg-primary: #101214;
             --text-primary: #e0e0e0;
             --text-secondary: #a0a0a0;
-            --accent-primary: #8ab4f8;
-            --accent-primary-darker: #101214;
-            --key-bg: #3c4043;
-            --key-border: #5f6368;
-            
-            /* גודל פונט רספונסיבי מבוסס על רוחב החלון */
+            --accent-glow: rgba(138, 180, 248, 0.4);
+            --glass-bg: rgba(26, 29, 33, 0.6);
+            --glass-border: rgba(138, 180, 248, 0.2);
+            --key-bg: rgba(60, 64, 67, 0.8);
+            --key-border: rgba(95, 99, 104, 0.7);
+            --aurora-1: #8ab4f8;
+            --aurora-2: #c58af9;
+            --aurora-3: #81c995;
+            --accent-glow: #00BFFF; /* או כל צבע זוהר אחר שתרצה */
+--tooltip-background: #333333;
             font-size: calc(10px + 0.5vw); 
         }
 
@@ -28,225 +32,427 @@
             background-color: var(--bg-primary);
             color: var(--text-primary);
             font-family: 'Poppins', sans-serif;
-            overflow: hidden;
-            -webkit-font-smoothing: antialiased;
             height: 100vh;
+            width: 100vw;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            position: relative; 
         }
 
-        .drag-bar {
+        /* --- רקע אורורה דינמי --- */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 30px;
-            -webkit-app-region: drag;
-            background-color: var(--bg-tertiary);
-            user-select: none;
-            position: relative;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        
-        #settings-button {
-            -webkit-app-region: no-drag;
-            width: 30px;
-            height: 30px;
-            border: none;
-            background: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 1.6rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color .2s ease, transform .3s ease;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            background: 
+                radial-gradient(circle at 10% 20%, var(--aurora-1), transparent 40%),
+                radial-gradient(circle at 80% 30%, var(--aurora-2), transparent 40%),
+                radial-gradient(circle at 50% 90%, var(--aurora-3), transparent 40%);
+            filter: blur(100px);
+            opacity: 0.25;
+            animation: aurora-flow 25s linear infinite;
         }
 
-        #settings-button:hover {
-            color: var(--accent-primary);
-            transform: rotate(45deg);
+        @keyframes aurora-flow {
+            0% { transform: rotate(0deg) scale(1.2); }
+            50% { transform: rotate(180deg) scale(1.5); }
+            100% { transform: rotate(360deg) scale(1.2); }
         }
 
-        .container {
-            padding: 4vw;
+        /* --- סרגל גרירה עליון --- */
+/* --- The Main Drag Bar --- */
+.top-bar {
+    width: 100%;
+    height: 38px;
+    -webkit-app-region: drag;
+    background: var(--bg-primary);
+    user-select: none;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0; /* הסרנו את הריווח מכאן */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.button-container {
+    display: flex;
+    align-items: center;
+    -webkit-app-region: no-drag;
+    /* וזה השינוי המרכזי שיוצר את הריווח מהקצה */
+    margin-right: 10px;
+}
+
+/* --- Shared Button & Tooltip Styling --- */
+.icon-button {
+    -webkit-app-region: no-drag;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative; /* Required for tooltip positioning */
+    margin-left: 6px;
+}
+
+.icon-button svg {
+    width: 22px; 
+    height: 22px;
+    transition: all 0.4s ease;
+}
+
+/* Tooltip - The "External" Text */
+.icon-button::before {
+    content: attr(data-tooltip); /* Get text from data-tooltip attribute */
+    position: absolute;
+    bottom: 125%; /* Position above the button */
+    left: 50%;
+    transform: translateX(-50%) translateY(5px); /* Start slightly lower */
+    background: var(--tooltip-background);
+    color: var(--text-primary);
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none; /* Tooltip should not be interactive */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* --- Hover Animations --- */
+.icon-button:hover {
+    transform: scale(1.1);
+}
+
+.icon-button:hover svg path {
+    stroke: var(--accent-glow); /* Change color on hover */
+    filter: drop-shadow(0 0 5px var(--accent-glow)); /* Add a beautiful glow */
+}
+
+/* Show tooltip on hover */
+.icon-button:hover::before {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0); /* Move it into place */
+}
+
+/* Specific animation for the "Settings" button */
+#settings-button:hover svg {
+    transform: rotate(90deg) scale(1.1);
+}  
+          .container {
+            padding: 2vh 4vw;
             text-align: center;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
+            overflow-y: auto;
+            
+            /* Glassmorphism Effect */
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            margin: 0 20px 20px 20px;
+            
+            /* אנימציית כניסה */
+            opacity: 0;
+            transform: scale(0.95);
+            animation: fadeInScaleUp 1s cubic-bezier(0.165, 0.84, 0.44, 1) .2s forwards;
         }
         
+        @keyframes fadeInScaleUp {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        /* עיצוב סרגל הגלילה */
+        .container::-webkit-scrollbar { width: 8px; }
+        .container::-webkit-scrollbar-track { background: transparent; }
+        .container::-webkit-scrollbar-thumb {
+            background-color: var(--key-bg);
+            border-radius: 4px;
+            border: 2px solid transparent;
+        }
+
+        /* --- אלמנטים טיפוגרפיים --- */
         .title {
-            font-size: 2.5em; /* יחידה יחסית */
-            font-weight: 600;
-            color: var(--accent-primary);
-            margin-bottom: 2vh;
-            animation: fadeInDown .8s ease-out forwards;
+            font-size: 2.8em;
+            font-weight: 700;
+            background: linear-gradient(90deg, #e0e0e0, #a0a0a0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 2vh;
+            margin-bottom: 1vh;
+            letter-spacing: -1px;
+            animation: slideInFromTop 1s ease-out .6s forwards;
+            opacity: 0;
         }
 
         .subtitle {
-            font-size: 1.3em; /* יחידה יחסית */
+            font-size: 1.3em;
             font-weight: 300;
-            margin-bottom: 3.5vh;
-            animation: fadeInUp .8s ease-out .2s forwards;
+            margin-bottom: 4vh;
+            color: var(--text-secondary);
+            animation: slideInFromTop 1s ease-out .8s forwards;
             opacity: 0;
         }
-        
+
+        @keyframes slideInFromTop {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- רשימת קיצורי הדרך --- */
         .shortcuts-list {
             list-style-type: none;
             padding: 0;
             margin: 0 auto;
-            width: 90%;
-            max-width: 380px;
+            width: 95%;
+            max-width: 450px;
         }
 
         .shortcut-item {
-            background-color: var(--bg-secondary);
+            background-color: transparent; /* הרקע מגיע מה-container */
             border-radius: 8px;
             padding: 1.5vh 2vw;
             margin-bottom: 1.2vh;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            border: 1px solid transparent;
+            transition: background-color .3s ease, border-color .3s ease, transform .3s ease;
+            
+            /* אנימציית כניסה מדורגת */
             opacity: 0;
-            animation: fadeInUp .6s ease-out forwards;
+            transform: translateY(20px);
+            animation: fadeInUpItem .6s ease-out forwards;
         }
 
-        .shortcut-item:nth-child(1) { animation-delay: .4s; }
-        .shortcut-item:nth-child(2) { animation-delay: .5s; }
-        .shortcut-item:nth-child(3) { animation-delay: .6s; }
-        .shortcut-item:nth-child(4) { animation-delay: .7s; }
+        /* דירוג אנימציית הפריטים */
+        .shortcut-item:nth-child(1) { animation-delay: 1.0s; }
+        .shortcut-item:nth-child(2) { animation-delay: 1.05s; }
+        .shortcut-item:nth-child(3) { animation-delay: 1.1s; }
+        .shortcut-item:nth-child(4) { animation-delay: 1.15s; }
+        .shortcut-item:nth-child(5) { animation-delay: 1.2s; }
+        .shortcut-item:nth-child(6) { animation-delay: 1.25s; }
+        .shortcut-item:nth-child(7) { animation-delay: 1.3s; }
+        .shortcut-item:nth-child(8) { animation-delay: 1.35s; }
+
+        @keyframes fadeInUpItem {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
         
+        .shortcut-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: var(--glass-border);
+            transform: scale(1.02);
+        }
+
         .shortcut-desc {
             font-size: 1.1em;
-            font-weight: 300;
+            font-weight: 400;
             text-align: left;
         }
 
         .shortcut-key {
-            font-weight: 400;
+            font-weight: 500;
             background-color: var(--key-bg);
-            padding: 0.5em 1em;
-            border-radius: 5px;
-            border-bottom: 2px solid var(--key-border);
-            min-width: 50px;
+            padding: 0.6em 1.1em;
+            border-radius: 6px;
+            border: 1px solid var(--key-border);
+            min-width: 60px;
             text-align: center;
             margin-left: 15px;
-            white-space: nowrap; /* מונע שבירת שורה */
+            white-space: nowrap;
+            transition: all .3s ease;
         }
         
-        .launch-button {
-            margin-top: 3vh;
-            padding: 1.4em 2.8em;
-            font-size: 1em;
-            font-weight: 600;
-            background: linear-gradient(90deg, #8ab4f8, #a6c8ff);
-            color: var(--accent-primary-darker);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform .2s ease, box-shadow .2s ease;
-            opacity: 0;
-            animation: fadeInUp .8s ease-out 1s forwards;
+        .shortcut-item:hover .shortcut-key {
+            background-color: var(--aurora-1);
+            border-color: var(--aurora-1);
+            color: var(--bg-primary);
+            box-shadow: 0 0 15px var(--accent-glow);
         }
+        
+        /* --- כפתור הפעלה --- */
+.launch-button {
+    margin-top: 4vh;
+    margin-bottom: 4vh;
+    padding: 1.2em 2.8em;
+    font-size: 1.1em;
+    font-weight: 600;
+    background: linear-gradient(90deg, #007bff, #28a745); /* Blue to Green gradient */
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform .3s ease, box-shadow .3s ease;
+    opacity: 0;
+    animation: fadeInUpItem 1s ease-out 1.6s forwards;
+    position: relative;
+    overflow: hidden;
+    display: flex; /* Enable flexbox for centering */
+    justify-content: center; /* Center text horizontally */
+    align-items: center; /* Center text vertically */
+    text-align: center; /* Ensure text is centered inside */
+}
 
-        .launch-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(138, 180, 248, .3);
-        }
+.launch-button:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 8px 25px rgba(0, 123, 255, .3); /* Keep a blue-ish shadow */
+}
 
-        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+.launch-button:active {
+    transform: translateY(-2px) scale(1.01);
+}
     </style>
 </head>
 <body>
-    <div class="drag-bar">
-        <button id="settings-button" title="Settings">&#9881;</button>
+<div class="top-bar">
+    <div class="button-container">
+         <button id="settings-button" class="icon-button" data-tooltip="Settings">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.69-1.62-0.92L14.4,2.28c-0.05-0.24-0.27-0.42-0.51-0.42 h-3.8c-0.24,0-0.46,0.18-0.51,0.42l-0.58,2.52C8.41,5.55,7.88,5.86,7.38,6.24l-2.39-0.96c-0.22-0.08-0.47,0-0.59,0.22 l-1.92,3.32c-0.11,0.2-0.06,0.47,0.12,0.61l2.03,1.58C4.02,11.36,4,11.68,4,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.69,1.62,0.92 l0.58,2.52c0.05,0.24,0.27,0.42,0.51,0.42h3.8c0.24,0,0.46-0.18,0.51-0.42l0.58-2.52c0.6-0.23,1.12-0.54,1.62-0.92l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" stroke="var(--text-secondary)" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
     </div>
+</div>
+
     <div class="container">
         <h1 class="title">Welcome to GeminiDesk</h1>
-        <p class="subtitle">Your AI assistant, always ready on your desktop.</p>
+        <p class="subtitle">Your AI assistant, supercharged for your desktop.</p>
+
         <ul class="shortcuts-list">
             <li class="shortcut-item">
                 <span class="shortcut-desc">Show / Hide Window</span>
                 <span class="shortcut-key" id="shortcut-key-showHide"></span>
             </li>
             <li class="shortcut-item">
+                <span class="shortcut-desc">Open New Window</span>
+                <span class="shortcut-key" id="shortcut-key-newWindow"></span>
+            </li>
+            <li class="shortcut-item">
+                <span class="shortcut-desc">Screenshot to Chat</span>
+                <span class="shortcut-key" id="shortcut-key-screenshot"></span>
+            </li>
+            <li class="shortcut-item">
+                <span class="shortcut-desc">New Chat (Pro Model)</span>
+                <span class="shortcut-key" id="shortcut-key-newChatPro"></span>
+            </li>
+            <li class="shortcut-item">
+                <span class="shortcut-desc">New Chat (Flash Model)</span>
+                <span class="shortcut-key" id="shortcut-key-newChatFlash"></span>
+            </li>
+            <li class="shortcut-item">
+                <span class="shortcut-desc">See Instructions Again</span>
+                <span class="shortcut-key" id="shortcut-key-showInstructions"></span>
+            </li>
+            <li class="shortcut-item">
                 <span class="shortcut-desc">Quit Application</span>
                 <span class="shortcut-key" id="shortcut-key-quit"></span>
             </li>
-            <li class="shortcut-item">
+             <li class="shortcut-item">
                 <span class="shortcut-desc">Move Window</span>
                 <span class="shortcut-key">Drag Top Bar</span>
             </li>
-            <li class="shortcut-item">
-                <span class="shortcut-desc">See instructions again</span>
-                <span class="shortcut-key" id="shortcut-key-showInstructions"></span>
-            </li>
         </ul>
+
         <button class="launch-button" id="launch-button">Got it! Launch Gemini</button>
     </div>
+
 <script>
+// אין צורך לשנות את הלוגיקה של הסקריפט, הוא עדיין יעבוד מצוין
+// עם מבנה ה-HTML וה-ID הקיימים.
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.electronAPI) { 
-        console.error("Electron API not found!");
+        console.error("Electron API not found! Displaying default shortcuts.");
+        // ניתן להציג כאן קיצורי דרך ברירת מחדל למקרה שה-API לא זמין
+        const defaults = {
+            'shortcut-key-showHide': 'Ctrl+Shift+G',
+            'shortcut-key-quit': 'Ctrl+Q',
+            'shortcut-key-showInstructions': 'Ctrl+I',
+            'shortcut-key-screenshot': 'Ctrl+Shift+S',
+            'shortcut-key-newChatPro': 'Ctrl+P',
+            'shortcut-key-newChatFlash': 'Ctrl+F',
+            'shortcut-key-newWindow': 'Ctrl+N'
+        };
+        for (const id in defaults) {
+            const el = document.getElementById(id);
+            if(el) el.textContent = defaults[id];
+        }
         return; 
     }
 
-const adjustFontSize = (element) => {
-    // 1. הגדר גדלים הגיוניים בפיקסלים
-    const MAX_FONT_SIZE = 14; // הגודל המקסימלי הרצוי לפונט
-    const MIN_FONT_SIZE = 8;  // הגודל המינימלי למניעת טקסט לא קריא
-
-    // 2. התחל תמיד מהגודל המקסימלי
-    let currentSize = MAX_FONT_SIZE;
-    element.style.fontSize = `${currentSize}px`;
-
-    // 3. הקטן את הפונט *רק* אם הטקסט גולש מהכפתור
-    while (element.scrollWidth > element.clientWidth && currentSize > MIN_FONT_SIZE) {
-        currentSize -= 0.5;
+    // פונקציה להתאמת גודל הפונט של מקשי הקיצור כדי למנוע גלישה
+    const adjustFontSize = (element) => {
+        const MAX_FONT_SIZE = 14;
+        const MIN_FONT_SIZE = 8;
+        let currentSize = MAX_FONT_SIZE;
         element.style.fontSize = `${currentSize}px`;
-    }
-};
 
+        // הקטנת הפונט אם הטקסט רחב יותר מהאלמנט
+        while (element.scrollWidth > element.clientWidth && currentSize > MIN_FONT_SIZE) {
+            currentSize -= 0.5;
+            element.style.fontSize = `${currentSize}px`;
+        }
+    };
+
+    // פונקציה לסנכרון קיצורי הדרך מההגדרות לתצוגה
     const syncShortcuts = (settings) => {
         const elementsToUpdate = [
             { id: 'shortcut-key-showHide', key: 'showHide' },
             { id: 'shortcut-key-quit', key: 'quit' },
-            { id: 'shortcut-key-showInstructions', key: 'showInstructions' }
+            { id: 'shortcut-key-showInstructions', key: 'showInstructions' },
+            { id: 'shortcut-key-screenshot', key: 'screenshot' },
+            { id: 'shortcut-key-newChatPro', key: 'newChatPro' },
+            { id: 'shortcut-key-newChatFlash', key: 'newChatFlash' },
+            { id: 'shortcut-key-newWindow', key: 'newWindow' }
         ];
 
         elementsToUpdate.forEach(item => {
             const element = document.getElementById(item.id);
-            if (element) {
+            if (element && settings.shortcuts[item.key]) {
                 element.textContent = settings.shortcuts[item.key];
-                // איפוס גודל פונט לפני התאמה מחדש
-                element.style.fontSize = ''; 
+                element.style.fontSize = ''; // איפוס לפני התאמה
                 adjustFontSize(element);
             }
         });
     };
 
-    // טען קיצורים באופן מיידי
+    // קריאה ראשונית להגדרות ורישום להאזנה לעדכונים
     window.electronAPI.getSettings().then(syncShortcuts);
-
-    // האזן לעדכונים עתידיים
-    window.electronAPI.onSettingsUpdated((settings) => {
-        syncShortcuts(settings);
-    });
+    window.electronAPI.onSettingsUpdated(syncShortcuts);
     
-    // התאם גדלים גם בשינוי גודל החלון
+    // התאמת גודל הפונט באופן דינמי גם בשינוי גודל החלון
     new ResizeObserver(() => {
-        document.querySelectorAll('.shortcut-key').forEach(el => {
-            if (el.id) { // ודא שיש ID כדי לא להתנגש עם הסטטי
-                 el.style.fontSize = ''; // איפוס
-                 adjustFontSize(el);
-            }
+        document.querySelectorAll('.shortcut-key[id]').forEach(el => {
+             el.style.fontSize = '';
+             adjustFontSize(el);
         });
     }).observe(document.body);
 
-    // כפתורים
+    // הוספת Event Listeners לכפתורים
     document.getElementById('settings-button').addEventListener('click', () => window.electronAPI.openSettingsWindow());
     document.getElementById('launch-button').addEventListener('click', () => window.electronAPI.completeOnboarding());
 });
