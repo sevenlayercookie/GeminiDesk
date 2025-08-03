@@ -29,7 +29,8 @@ const defaultSettings = {
     screenshot: 'Control+Alt+S',
     newChatPro: 'Alt+P',
     newChatFlash: 'Alt+F',
-      newWindow: 'Alt+N'
+    newWindow: 'Alt+N',
+    search: 'Alt+S'
   },
 lastUpdateCheck: 0,
 microphoneGranted: null,
@@ -156,6 +157,91 @@ function createNewChatWithModel(modelType) {
 
   targetView.webContents.executeJavaScript(script).catch(console.error);
 }
+
+function triggerSearch() {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  if (!focusedWindow) return;
+  const targetView = focusedWindow.getBrowserView();
+  if (!targetView) return;
+
+  if (!focusedWindow.isVisible()) focusedWindow.show();
+  if (focusedWindow.isMinimized()) focusedWindow.restore();
+  focusedWindow.focus();
+
+  const script = `
+    (async function() {
+      console.log('--- GeminiDesk: Triggering Search ---');
+
+      // Helper function to wait for an element to be ready
+      const waitForElement = (selector, timeout = 3000) => {
+        console.log(\`Waiting for element: \${selector}\`);
+        return new Promise((resolve, reject) => {
+          let timeoutHandle = null;
+          const interval = setInterval(() => {
+            const element = document.querySelector(selector);
+            if (element) {
+              if (timeoutHandle) clearTimeout(timeoutHandle);
+              clearInterval(interval);
+              console.log(\`Found element: \${selector}\`);
+              resolve(element);
+            }
+          }, 100);
+          timeoutHandle = setTimeout(() => {
+            clearInterval(interval);
+            console.error(\`GeminiDesk Error: Timeout waiting for \${selector}\`);
+            reject(new Error('Timeout for selector: ' + selector));
+          }, timeout);
+        });
+      };
+      
+      // Helper function to simulate a realistic user click
+      const simulateClick = (element) => {
+        if (!element) {
+            console.error('SimulateClick called on a null element.');
+            return;
+        }
+        console.log('Simulating click on:', element);
+        const events = ['mousedown', 'mouseup', 'click'];
+        events.forEach(type => {
+            const event = new MouseEvent(type, { bubbles: true, cancelable: true, view: window });
+            element.dispatchEvent(event);
+        });
+      };
+
+      try {
+        // Step 1: Click the Main Menu button to open the sidebar
+        const menuButton = document.querySelector('button[aria-label="Main menu"]');
+        if (menuButton) {
+            console.log('Step 1: Found and clicking main menu button.');
+            simulateClick(menuButton);
+            await new Promise(resolve => setTimeout(resolve, 300)); // Wait for sidebar animation
+        } else {
+            console.log('Step 1: Main menu button not found. Assuming sidebar is already open.');
+        }
+
+        // Step 2: Wait for the search bar to appear and click it
+        const searchNavBarButton = await waitForElement('search-nav-bar button.search-nav-bar');
+        console.log('Step 2: Found and clicking search navigation bar.');
+        simulateClick(searchNavBarButton);
+        await new Promise(resolve => setTimeout(resolve, 150)); // Wait for input field to render
+
+        // Step 3: Wait for the actual text input field and focus it
+        const searchInput = await waitForElement('input.search-input, input[placeholder="Search chats"]');
+        console.log('Step 3: Found search input field.');
+        searchInput.focus();
+        
+        console.log('--- GeminiDesk: SUCCESS! Search input focused. ---');
+
+      } catch (error) {
+        console.error('GeminiDesk Error during search sequence:', error.message);
+      }
+    })();
+  `;
+
+  targetView.webContents.executeJavaScript(script).catch(console.error);
+}
+
+
 function getSettings() {
   try {
     if (fs.existsSync(settingsPath)) {
@@ -337,8 +423,13 @@ setTimeout(() => {
             }, 500);
         }
     }
+// Add shortcut for search
+    if (shortcuts.search) {
+        globalShortcut.register(shortcuts.search, () => {
+            triggerSearch();
+        });
+    }
 
-    // Add shortcut for a new window
     if (shortcuts.newWindow) {
         globalShortcut.register(shortcuts.newWindow, () => {
             createWindow();
@@ -411,6 +502,7 @@ function loadGemini(targetWin) {
     });
 
     newView.webContents.loadURL('https://gemini.google.com/app');
+    newView.webContents.openDevTools({ mode: 'undocked' });
 
   targetWin.setBrowserView(newView);
   const bounds = targetWin.getBounds();

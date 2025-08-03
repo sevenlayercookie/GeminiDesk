@@ -353,6 +353,10 @@
                 <span class="shortcut-key" id="shortcut-key-newWindow"></span>
             </li>
             <li class="shortcut-item">
+                <span class="shortcut-desc">Search Chats</span>
+                <span class="shortcut-key" id="shortcut-key-search"></span>
+            </li>
+            <li class="shortcut-item">
                 <span class="shortcut-desc">Screenshot to Chat</span>
                 <span class="shortcut-key" id="shortcut-key-screenshot"></span>
             </li>
@@ -395,7 +399,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'shortcut-key-screenshot': 'Ctrl+Shift+S',
             'shortcut-key-newChatPro': 'Ctrl+P',
             'shortcut-key-newChatFlash': 'Ctrl+F',
-            'shortcut-key-newWindow': 'Ctrl+N'
+            'shortcut-key-newWindow': 'Ctrl+N',
+            'shortcut-key-search': 'Alt+S'
         };
         for (const id in defaults) {
             const el = document.getElementById(id);
@@ -419,16 +424,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Function to sync shortcuts from settings to the display
-    const syncShortcuts = (settings) => {
-        const elementsToUpdate = [
-            { id: 'shortcut-key-showHide', key: 'showHide' },
-            { id: 'shortcut-key-quit', key: 'quit' },
-            { id: 'shortcut-key-showInstructions', key: 'showInstructions' },
-            { id: 'shortcut-key-screenshot', key: 'screenshot' },
-            { id: 'shortcut-key-newChatPro', key: 'newChatPro' },
-            { id: 'shortcut-key-newChatFlash', key: 'newChatFlash' },
-            { id: 'shortcut-key-newWindow', key: 'newWindow' }
-        ];
+const syncShortcuts = (settings) => {
+    const elementsToUpdate = [
+        { id: 'shortcut-key-showHide', key: 'showHide' },
+        { id: 'shortcut-key-quit', key: 'quit' },
+        { id: 'shortcut-key-showInstructions', key: 'showInstructions' },
+        { id: 'shortcut-key-screenshot', key: 'screenshot' },
+        { id: 'shortcut-key-newChatPro', key: 'newChatPro' },
+        { id: 'shortcut-key-newChatFlash', key: 'newChatFlash' },
+        { id: 'shortcut-key-newWindow', key: 'newWindow' },
+        { id: 'shortcut-key-search', key: 'search' } 
+    ];
 
         elementsToUpdate.forEach(item => {
             const element = document.getElementById(item.id);
