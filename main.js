@@ -502,8 +502,6 @@ function loadGemini(targetWin) {
     });
 
     newView.webContents.loadURL('https://gemini.google.com/app');
-    newView.webContents.openDevTools({ mode: 'undocked' });
-
   targetWin.setBrowserView(newView);
   const bounds = targetWin.getBounds();
   newView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
