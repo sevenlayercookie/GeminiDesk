@@ -155,65 +155,6 @@
     </div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // ... (קוד קיים, ללא שינוי)
-    if (!window.electronAPI) { return; }
-    const electronAPI = window.electronAPI;
-    const syncUi = (settings) => { /* ... */ };
-    electronAPI.getSettings().then(syncUi);
-    
-    // **שינוי:** הוספת אלמנטים חדשים
-    const updateButton = document.getElementById('check-for-updates-button');
-    const updateStatusText = document.getElementById('update-status-text');
-
-    electronAPI.onSettingsUpdated(syncUi);
-    document.getElementById('close-button').addEventListener('click', () => window.close());
-    document.getElementById('setting-autoStart').addEventListener('change', (e) => electronAPI.updateSetting('autoStart', e.target.checked));
-    document.getElementById('setting-alwaysOnTop').addEventListener('change', (e) => electronAPI.updateSetting('alwaysOnTop', e.target.checked));
-    document.getElementById('reset-button').addEventListener('click', () => electronAPI.showConfirmReset());
-
-    // --- לוגיקת עדכונים חדשה ---
-    updateButton.addEventListener('click', () => {
-        electronAPI.checkForUpdates();
-    });
-
-    electronAPI.onUpdateStatus((data) => {
-        updateButton.disabled = true; // נעל את הכפתור בזמן פעולה
-        switch (data.status) {
-            case 'checking':
-                updateStatusText.textContent = 'Checking...';
-                break;
-            case 'available':
-                updateStatusText.textContent = 'Update available!';
-                break;
-            case 'downloading':
-                updateStatusText.textContent = `Downloading... ${data.percent}%`;
-                break;
-            case 'up-to-date':
-                updateStatusText.textContent = 'App is up to date';
-                updateButton.disabled = false;
-                break;
-            case 'downloaded':
-                updateStatusText.textContent = 'Ready to install';
-                updateButton.disabled = false;
-                // main.js יציג דיאלוג למשתמש
-                break;
-            case 'error':
-                updateStatusText.textContent = 'Update error';
-                updateButton.disabled = false;
-                break;
-        }
-    });
-
-    // ... (קוד מקליט הקיצורים, ללא שינוי) ...
-    let isRecording = false;
-    const startRecording = (button) => { /* ... */ };
-    document.querySelectorAll('.record-button').forEach(button => {
-        button.addEventListener('click', () => startRecording(button));
-    });
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
     if (!window.electronAPI) { return; }
     const electronAPI = window.electronAPI;
 
@@ -241,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     electronAPI.getSettings().then(syncUi);
     
-    // **שינוי:** הוספת אלמנטים חדשים
+    // **Change:** Added new elements
     const updateButton = document.getElementById('check-for-updates-button');
     const updateStatusText = document.getElementById('update-status-text');
 
@@ -251,13 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('setting-alwaysOnTop').addEventListener('change', (e) => electronAPI.updateSetting('alwaysOnTop', e.target.checked));
     document.getElementById('reset-button').addEventListener('click', () => electronAPI.showConfirmReset());
 
-    // --- לוגיקת עדכונים חדשה ---
+    // --- New update logic ---
     updateButton.addEventListener('click', () => {
         electronAPI.checkForUpdates();
     });
 
     electronAPI.onUpdateStatus((data) => {
-        updateButton.disabled = true; // נעל את הכפתור בזמן פעולה
+        updateButton.disabled = true; // Lock the button during operation
         updateStatusText.style.color = 'var(--text-secondary)';
 
         switch (data.status) {

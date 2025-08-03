@@ -1,13 +1,20 @@
 const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, dialog, screen, shell, session } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const AutoLaunch = require('auto-launch');
 const path = require('path');
 const fs = require('fs');
-const { spawn, execSync } = require('child_process');
+const { spawn } = require('child_process');
 const { clipboard, nativeImage } = require('electron');
 let confirmWin = null;
 let isQuitting = false;
+
+const autoLauncher = new AutoLaunch({
+    name: 'GeminiApp',
+    path: app.getPath('exe'),
+});
+
 // ================================================================= //
-// ניהול הגדרות (Settings Management)
+// Settings Management
 // ================================================================= //
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settingsWin = null;
@@ -53,7 +60,7 @@ function scheduleDailyUpdateCheck() {
   setInterval(checkForUpdates, 6 * 60 * 60 * 1000); 
 }
 function createNewChatWithModel(modelType) {
-  // קבל את החלון והתצוגה הפעילים כרגע
+  // Get the currently active window and view
   const focusedWindow = BrowserWindow.getFocusedWindow();
   if (!focusedWindow) return;
   const targetView = focusedWindow.getBrowserView();
@@ -172,62 +179,43 @@ function saveSettings(settings) {
 let settings = getSettings();
 
 // ================================================================= //
-// הגדרות ומשתנים גלובליים
+// Global Settings and Variables
 // ================================================================= //
-let win;
-let view;
-let prevBounds = null;
 const margin = 20;
 const originalSize = { width: 500, height: 650 };
 const canvasSize = { width: 1400, height: 800 };
-let isCanvasActive = false;
 const detachedViews = new Map();
 
 // ================================================================= //
-// פונקציות ניהול האפליקציה
+// Application Management Functions
 // ================================================================= //
 
 function setAutoLaunch(shouldEnable) {
-  // הפונקציה רלוונטית רק לחלונות
-  if (process.platform !== 'win32') {
-    return;
-  }
-
-  const appName = 'GeminiApp';
-  const appPath = `"${app.getPath('exe')}"`; 
-   const regKey = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
-
-  try {
     if (shouldEnable) {
-      // הוספת המפתח לרישום עם הנתיב המלא במרכאות
-      execSync(`REG ADD "${regKey}" /v "${appName}" /t REG_SZ /d ${appPath} /f`);
+        autoLauncher.enable();
     } else {
-      // מחיקת המפתח מהרישום
-      execSync(`REG DELETE "${regKey}" /v "${appName}" /f`);
+        autoLauncher.disable();
     }
-  } catch (e) {
-    console.error('Failed to update registry for auto-start:', e);
-  }
 }
 
 function registerShortcuts() {
-    // הסר רישום קודם כדי למנוע התנגשויות
+    // Unregister all shortcuts before registering new ones to avoid conflicts
     globalShortcut.unregisterAll();
 
     const shortcuts = settings.shortcuts;
 
     // ================================================================= //
-    // תיקון מס' 1: הסתר/הצג את כל החלונות ביחד
+    // Fix #1: Hide/Show all windows together
     // ================================================================= //
     if (shortcuts.showHide) {
         globalShortcut.register(shortcuts.showHide, () => {
             const allWindows = BrowserWindow.getAllWindows();
             if (allWindows.length === 0) return;
 
-            // בדוק את מצב הנראות של החלון הראשון
+            // Check the visibility state of the first window
             const shouldShow = !allWindows[0].isVisible();
 
-            // החל את הפעולה על כל החלונות
+            // Apply the action to all windows
             allWindows.forEach(win => {
                 if (shouldShow) {
                     win.show();
@@ -261,7 +249,7 @@ function registerShortcuts() {
             if (focusedWindow && !focusedWindow.isDestroyed()) {
                 const view = focusedWindow.getBrowserView();
                 if (view) {
-                    // נתק את התצוגה מהחלון ושמור אותה בצד
+                    // Detach the view from the window and save it
                     focusedWindow.removeBrowserView(view);
                     detachedViews.set(focusedWindow, view); 
                 }
@@ -272,8 +260,8 @@ function registerShortcuts() {
     }
 
     if (shortcuts.screenshot) {
-        // ... (הקוד של צילום המסך נשאר ללא שינוי) ...
-        // (השאר את הלוגיקה הקיימת של צילום המסך כפי שהיא)
+        // ... (Screenshot code remains unchanged) ...
+        // (Keep the existing screenshot logic as is)
         let isScreenshotProcessActive = false;
 
         globalShortcut.register(shortcuts.screenshot, () => {
@@ -282,11 +270,11 @@ function registerShortcuts() {
             }
             isScreenshotProcessActive = true;
 
-            // השתמש בחלון הפעיל או צור אחד חדש
+            // Use the active window or create a new one
             let targetWin = BrowserWindow.getFocusedWindow();
             if (!targetWin) {
                 createWindow();
-                // המתן עד שהחלון החדש יהיה מוכן
+                // Wait for the new window to be ready
                 targetWin = BrowserWindow.getAllWindows().pop();
                 targetWin.once('ready-to-show', () => {
                     proceedWithScreenshot(targetWin);
@@ -329,16 +317,16 @@ setTimeout(() => {
         viewInstance.webContents.paste();
         console.log('Screenshot pasted from clipboard!');
 
-        // החזר את הגדרת "תמיד למעלה" למצבה המקורי
+        // Restore the "always on top" setting to its original state
         winInstance.setAlwaysOnTop(settings.alwaysOnTop);
 
-        // התיקון: הוספת השהיה קצרה כדי לתת ל-Windows להגיב
+        // Fix: Add a short delay to allow Windows to react
         setTimeout(() => {
             if (winInstance && !winInstance.isDestroyed()) {
                 winInstance.focus();
                 winInstance.moveTop();
             }
-        }, 50); // השהיה קצרצרה של 50 מילישניות
+        }, 50); // A very short delay of 50 milliseconds
     }
     isScreenshotProcessActive = false;
 }, 200);
@@ -350,7 +338,7 @@ setTimeout(() => {
         }
     }
 
-    // הוספת הקיצור לחלון חדש
+    // Add shortcut for a new window
     if (shortcuts.newWindow) {
         globalShortcut.register(shortcuts.newWindow, () => {
             createWindow();
@@ -372,6 +360,10 @@ function createWindow() {
     }
   });
 
+  // Attach custom properties for canvas mode state
+  newWin.isCanvasActive = false;
+  newWin.prevBounds = null;
+
   newWin.on('blur', () => {
     if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
   });
@@ -384,18 +376,23 @@ function createWindow() {
     detachedViews.delete(newWin);
   });
 
-  // עדיין נעדכן את המשתנה הגלובלי 'win' באופן זמני לצורך תאימות לאחור
-  win = newWin;
-
   if (!settings.onboardingShown) {
     newWin.loadFile('onboarding.html');
   } else {
-    // קריאה לגרסה החדשה של הפונקציה עם החלון הספציפי
+    // Call the new version of the function with the specific window
     loadGemini(newWin);
   }
 }
 function loadGemini(targetWin) {
   if (!targetWin || targetWin.isDestroyed()) return;
+
+  const view = targetWin.getBrowserView();
+  if (view) {
+    // If a view already exists, just load the URL
+    view.webContents.loadURL('https://gemini.google.com/app');
+    return;
+  }
+
   targetWin.loadFile('drag.html');
 
   const newView = new BrowserView({
@@ -421,17 +418,17 @@ function loadGemini(targetWin) {
   newView.setAutoResize({ width: true, height: true });
 }
 // ================================================================= //
-// פונקציות אנימציה ושינוי גודל (ללא שינוי מהמקור)
+// Animation and Resizing Functions (Unchanged from original)
 // ================================================================= //
 
 async function setCanvasMode(isCanvas, targetWin = null) {
   const activeWin = targetWin || BrowserWindow.getFocusedWindow();
-  if (!activeWin || isCanvas === isCanvasActive) return;
+  if (!activeWin || isCanvas === activeWin.isCanvasActive) return;
 
   const activeView = activeWin.getBrowserView();
   if (!activeView) return;
 
-  isCanvasActive = isCanvas;
+  activeWin.isCanvasActive = isCanvas;
   const currentBounds = activeWin.getBounds();
   if (activeWin.isMinimized()) activeWin.restore();
 
@@ -441,7 +438,7 @@ async function setCanvasMode(isCanvas, targetWin = null) {
   } catch (e) { console.error('Could not read scroll position:', e); }
 
   if (isCanvas) {
-    prevBounds = { ...currentBounds };
+    activeWin.prevBounds = { ...currentBounds };
     const display  = screen.getDisplayMatching(currentBounds);
     const workArea = display.workArea;
     const targetWidth  = Math.min(canvasSize.width,  workArea.width - margin * 2);
@@ -450,9 +447,9 @@ async function setCanvasMode(isCanvas, targetWin = null) {
     const newY = Math.max(workArea.y + margin, Math.min(currentBounds.y, workArea.y + workArea.height - targetHeight - margin));
     animateResize({ x: newX, y: newY, width: targetWidth, height: targetHeight }, activeWin, activeView);
   } else {
-    if (prevBounds) {
-      animateResize(prevBounds, activeWin, activeView);
-      prevBounds = null;
+    if (activeWin.prevBounds) {
+      animateResize(activeWin.prevBounds, activeWin, activeView);
+      activeWin.prevBounds = null;
     } else {
       animateResize({ ...originalSize, x: currentBounds.x, y: currentBounds.y }, activeWin, activeView);
       activeWin.center();
@@ -465,7 +462,7 @@ async function setCanvasMode(isCanvas, targetWin = null) {
   }, 300);
 }
 function animateResize(targetBounds, activeWin, activeView, duration_ms = 200) {
-  if (!activeWin || !activeView) return; // הגנה נוספת
+  if (!activeWin || !activeView) return; // Extra protection
 
   const start = activeWin.getBounds();
   const steps = 20;
@@ -490,7 +487,7 @@ function animateResize(targetBounds, activeWin, activeView, duration_ms = 200) {
   step();
 }
 // ================================================================= //
-// טיפול בקבצים שנשלחים מהתפריט הימני ונעילת מופע יחיד
+// Handling files from context menu and single instance lock
 // ================================================================= //
 
 let filePathToProcess = null;
@@ -510,10 +507,12 @@ if (!gotTheLock) {
     app.quit();
 } else {
     app.on('second-instance', (event, commandLine, workingDirectory) => {
-        // Someone tried to run a second instance. Focus our window and handle the file.
-        if (win) {
-            if (win.isMinimized()) win.restore();
-            win.focus();
+        // Someone tried to run a second instance.
+        let targetWin = BrowserWindow.getAllWindows().pop() || null;
+
+        if (targetWin) {
+            if (targetWin.isMinimized()) targetWin.restore();
+            targetWin.focus();
 
             // Check for a file path in the command line of the second instance
             const potentialPath = commandLine.find(arg => fs.existsSync(arg));
@@ -525,19 +524,37 @@ if (!gotTheLock) {
 }
 
 function handleFileOpen(filePath) {
-    if (!win || !view) {
-        // If the window isn't ready yet, store the path to process later
+    let targetWin = BrowserWindow.getFocusedWindow();
+
+    if (!targetWin) {
+        // If no window is focused, try to get the last created one.
+        const allWindows = BrowserWindow.getAllWindows();
+        if (allWindows.length > 0) {
+            targetWin = allWindows[allWindows.length - 1];
+        }
+    }
+
+    // If still no window, store for later.
+    if (!targetWin) {
         filePathToProcess = filePath;
         return;
     }
 
+    const targetView = targetWin.getBrowserView();
+    if (!targetView) {
+        // If the view isn't ready, store for later.
+        filePathToProcess = filePath;
+        return;
+    }
+
+
     try {
         // Bring the window to the front and give it focus
-        if (!win.isVisible()) win.show();
-        if (win.isMinimized()) win.restore();
-        win.setAlwaysOnTop(true); // Temporarily bring to front to ensure it gets focus
-        win.focus();
-        win.moveTop();
+        if (!targetWin.isVisible()) targetWin.show();
+        if (targetWin.isMinimized()) targetWin.restore();
+        targetWin.setAlwaysOnTop(true); // Temporarily bring to front to ensure it gets focus
+        targetWin.focus();
+        targetWin.moveTop();
 
         // Check file type to handle images and other files correctly
         const ext = path.extname(filePath).toLowerCase();
@@ -559,15 +576,15 @@ function handleFileOpen(filePath) {
 
         // Give the OS a moment to process the clipboard command
         setTimeout(() => {
-            if (win && !win.isDestroyed() && view && view.webContents) {
-                view.webContents.focus();
-                view.webContents.paste();
+            if (targetWin && !targetWin.isDestroyed() && targetView && targetView.webContents) {
+                targetView.webContents.focus();
+                targetView.webContents.paste();
                 console.log('Pasting file from clipboard:', filePath);
 
                 // Restore the original alwaysOnTop setting after a moment
                 setTimeout(() => {
-                    if (win && !win.isDestroyed()) {
-                       win.setAlwaysOnTop(settings.alwaysOnTop);
+                    if (targetWin && !targetWin.isDestroyed()) {
+                       targetWin.setAlwaysOnTop(settings.alwaysOnTop);
                     }
                 }, 200);
             }
@@ -577,14 +594,14 @@ function handleFileOpen(filePath) {
     } catch (error) {
         console.error('Failed to process file for pasting:', error);
         dialog.showErrorBox('File Error', 'Could not copy the selected file to the clipboard.');
-        if (win) { // Restore alwaysOnTop setting even on error
-            win.setAlwaysOnTop(settings.alwaysOnTop);
+        if (targetWin) { // Restore alwaysOnTop setting even on error
+            targetWin.setAlwaysOnTop(settings.alwaysOnTop);
         }
     }
 }
 
 // ================================================================= //
-// מחזור החיים של האפליקציה (App Lifecycle)
+// App Lifecycle
 // ================================================================= //
 
 app.whenReady().then(() => {
@@ -607,18 +624,24 @@ autoUpdater.autoDownload = false;
 scheduleDailyUpdateCheck();
 // If the app was opened with a file, handle it now
     if (filePathToProcess) {
-        // We need to wait until the Gemini page is fully loaded
-        view.webContents.once('did-finish-load', () => {
-             // A small extra delay to ensure all scripts on the page have run
-            setTimeout(() => {
-                handleFileOpen(filePathToProcess);
-            }, 1000);
-        });
+        const primaryWindow = BrowserWindow.getAllWindows()[0];
+        if (primaryWindow) {
+            const primaryView = primaryWindow.getBrowserView();
+            if (primaryView) {
+                // We need to wait until the Gemini page is fully loaded
+                primaryView.webContents.once('did-finish-load', () => {
+                    // A small extra delay to ensure all scripts on the page have run
+                    setTimeout(() => {
+                        handleFileOpen(filePathToProcess);
+                    }, 1000);
+                });
+            }
+        }
     }
 });
 
 app.on('will-quit', () => {
-  isQuitting = true; // <-- הוסף את השורה הזו
+  isQuitting = true; // <-- Add this line
   globalShortcut.unregisterAll();
 });
 
@@ -630,7 +653,7 @@ ipcMain.on('check-for-updates', () => {
   autoUpdater.checkForUpdates();
 });
 
-// === ניהול תהליך העדכון עם פידבק לחלון ההגדרות ===
+// === Update process management with feedback to the settings window ===
 const sendUpdateStatus = (status, data = {}) => {
   const allWindows = BrowserWindow.getAllWindows();
   allWindows.forEach(win => {
@@ -670,7 +693,7 @@ autoUpdater.on('download-progress', (progressObj) => {
 
 autoUpdater.on('update-downloaded', (info) => {
   sendUpdateStatus('downloaded');
-  // שאל את המשתמש אם להתקין עכשיו
+  // Ask the user if they want to install now
   dialog.showMessageBox({
     type: 'info',
     title: 'Update Ready',
@@ -680,7 +703,7 @@ autoUpdater.on('update-downloaded', (info) => {
     if (buttonIndex.response === 0) {
       autoUpdater.quitAndInstall();
     }
-    // אם המשתמש בחר "Later", העדכון יותקן אוטומטית ביציאה הבאה
+    // If the user chose "Later", the update will be installed automatically on the next quit
   });
 });
 
@@ -689,7 +712,7 @@ autoUpdater.on('error', (err) => {
 });
 
 // ================================================================= //
-// טיפול באירועים (IPC Event Handlers)
+// IPC Event Handlers
 // ================================================================= //
 ipcMain.on('open-new-window', () => {
   createWindow();
@@ -704,18 +727,17 @@ ipcMain.on('onboarding-complete', (event) => {
     const existingView = detachedViews.get(senderWindow);
     
     if (existingView) {
-      // התיקון: טען מחדש את הסרגל העליון לפני החזרת התצוגה
+      // Fix: Reload the top bar before restoring the view
       senderWindow.loadFile('drag.html').then(() => {
-        // לאחר שהסרגל נטען, החזר את התצוגה של ג'מיני
+        // After the bar is loaded, restore the Gemini view
         senderWindow.setBrowserView(existingView);
         const bounds = senderWindow.getBounds();
         existingView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
         detachedViews.delete(senderWindow);
       }).catch(err => console.error('Failed to reload drag.html:', err));
     } else {
-      // במקרה של הפעלה ראשונה, טען כרגיל
-      win = senderWindow;
-      loadGemini();
+      // On first launch, load normally
+      loadGemini(senderWindow);
     }
   }
 });
@@ -754,23 +776,25 @@ ipcMain.on('show-confirm-reset', () => {
   confirmWin.on('closed', () => confirmWin = null);
 });
 
-// 2. ביטול פעולת האיפוס
+// 2. Cancel the reset action
 ipcMain.on('cancel-reset-action', () => {
   if (confirmWin) confirmWin.close();
 });
 
-// 3. אישור וביצוע האיפוס
+// 3. Confirm and execute the reset
 ipcMain.on('confirm-reset-action', () => {
   if (confirmWin) confirmWin.close();
 
-  // הלוגיקה של האיפוס עצמו
+  // The reset logic itself
   if (fs.existsSync(settingsPath)) fs.unlinkSync(settingsPath);
   settings = JSON.parse(JSON.stringify(defaultSettings));
   registerShortcuts();
-  if (win) win.setAlwaysOnTop(settings.alwaysOnTop);
   setAutoLaunch(settings.autoStart);
   BrowserWindow.getAllWindows().forEach(w => {
-    if (!w.isDestroyed()) w.webContents.send('settings-updated', settings);
+    if (!w.isDestroyed()) {
+        w.setAlwaysOnTop(settings.alwaysOnTop);
+        w.webContents.send('settings-updated', settings);
+    }
   });
   console.log('All settings have been reset to default.');
 });
@@ -780,30 +804,34 @@ ipcMain.handle('get-settings', async () => {
 });
 
 ipcMain.on('update-setting', (event, key, value) => {
-    // **התיקון:** לא קוראים ל-getSettings() מחדש.
-    // אנחנו משנים ישירות את אובייקט ההגדרות הגלובלי שקיים בזיכרון.
+    // **Fix:** We don't call getSettings() again.
+    // We directly modify the global settings object that exists in memory.
 
     if (key.startsWith('shortcuts.')) {
         const subKey = key.split('.')[1];
-        settings.shortcuts[subKey] = value; // עדכון האובייקט הגלובלי
+        settings.shortcuts[subKey] = value; // Update the global object
     } else {
-        settings[key] = value; // עדכון האובייקט הגלובלי
+        settings[key] = value; // Update the global object
     }
 
-    saveSettings(settings); // שמירת האובייקט הגלובלי המעודכן
+    saveSettings(settings); // Save the updated global object
 
-    // החל הגדרות באופן מיידי
-    if (key === 'alwaysOnTop' && win) {
-        win.setAlwaysOnTop(value);
+    // Apply settings immediately
+    if (key === 'alwaysOnTop') {
+        BrowserWindow.getAllWindows().forEach(w => {
+            if (!w.isDestroyed()) {
+                w.setAlwaysOnTop(value);
+            }
+        });
     }
     if (key === 'autoStart') {
         setAutoLaunch(value);
     }
     if (key.startsWith('shortcuts.')) {
-        registerShortcuts(); // הפונקציה הזו תשתמש עכשיו בהגדרות המעודכנות
+        registerShortcuts(); // This function will now use the updated settings
     }
     
-    // שלח את כל אובייקט ההגדרות המעודכן בחזרה לחלון כדי שיסתנכרן
+    // Send the entire updated settings object back to the window to sync
     BrowserWindow.getAllWindows().forEach(w => {
         if (!w.isDestroyed()) {
             w.webContents.send('settings-updated', settings);
@@ -811,13 +839,13 @@ ipcMain.on('update-setting', (event, key, value) => {
     });
 });
 
-ipcMain.on('open-settings-window', (event) => { // הוספנו את המילה event
+ipcMain.on('open-settings-window', (event) => { // Added the event word
   if (settingsWin) {
     settingsWin.focus();
     return;
   }
 
-  // זיהוי החלון שממנו נשלחה הבקשה
+  // Identify the window from which the request was sent
   const parentWindow = BrowserWindow.fromWebContents(event.sender);
 
   settingsWin = new BrowserWindow({
@@ -825,7 +853,7 @@ ipcMain.on('open-settings-window', (event) => { // הוספנו את המילה 
     height: 580,
     resizable: false,
     frame: false,
-    parent: parentWindow, // שימוש בחלון האב הנכון
+    parent: parentWindow, // Use the correct parent window
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -843,7 +871,7 @@ ipcMain.on('open-settings-window', (event) => { // הוספנו את המילה 
     settingsWin = null;
   });
 });
-// אירועי עדכון אוטומטי
+// Auto-update events
 autoUpdater.on('update-available', () => {
   dialog.showMessageBox({ 
     type: 'info', 

@@ -21,7 +21,7 @@
             --aurora-1: #8ab4f8;
             --aurora-2: #c58af9;
             --aurora-3: #81c995;
-            --accent-glow: #00BFFF; /* או כל צבע זוהר אחר שתרצה */
+            --accent-glow: #00BFFF; /* Or any other glow color you want */
 --tooltip-background: #333333;
             font-size: calc(10px + 0.5vw); 
         }
@@ -41,7 +41,7 @@
             position: relative; 
         }
 
-        /* --- רקע אורורה דינמי --- */
+        /* --- Dynamic Aurora Background --- */
         body::before {
             content: '';
             position: absolute;
@@ -66,7 +66,7 @@
             100% { transform: rotate(360deg) scale(1.2); }
         }
 
-        /* --- סרגל גרירה עליון --- */
+        /* --- Top Drag Bar --- */
 /* --- The Main Drag Bar --- */
 .top-bar {
     width: 100%;
@@ -77,7 +77,7 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    padding: 0; /* הסרנו את הריווח מכאן */
+    padding: 0; /* Removed padding from here */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
 }
@@ -86,7 +86,7 @@
     display: flex;
     align-items: center;
     -webkit-app-region: no-drag;
-    /* וזה השינוי המרכזי שיוצר את הריווח מהקצה */
+    /* And this is the main change that creates the margin from the edge */
     margin-right: 10px;
 }
 
@@ -170,7 +170,7 @@
             border-radius: 16px;
             margin: 0 20px 20px 20px;
             
-            /* אנימציית כניסה */
+            /* Entrance Animation */
             opacity: 0;
             transform: scale(0.95);
             animation: fadeInScaleUp 1s cubic-bezier(0.165, 0.84, 0.44, 1) .2s forwards;
@@ -183,7 +183,7 @@
             }
         }
         
-        /* עיצוב סרגל הגלילה */
+        /* Scrollbar Style */
         .container::-webkit-scrollbar { width: 8px; }
         .container::-webkit-scrollbar-track { background: transparent; }
         .container::-webkit-scrollbar-thumb {
@@ -192,7 +192,7 @@
             border: 2px solid transparent;
         }
 
-        /* --- אלמנטים טיפוגרפיים --- */
+        /* --- Typographic Elements --- */
         .title {
             font-size: 2.8em;
             font-weight: 700;
@@ -220,7 +220,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- רשימת קיצורי הדרך --- */
+        /* --- Shortcuts List --- */
         .shortcuts-list {
             list-style-type: none;
             padding: 0;
@@ -240,13 +240,13 @@
             border: 1px solid transparent;
             transition: background-color .3s ease, border-color .3s ease, transform .3s ease;
             
-            /* אנימציית כניסה מדורגת */
+            /* Staggered Entrance Animation */
             opacity: 0;
             transform: translateY(20px);
             animation: fadeInUpItem .6s ease-out forwards;
         }
 
-        /* דירוג אנימציית הפריטים */
+        /* Staggering the item animation */
         .shortcut-item:nth-child(1) { animation-delay: 1.0s; }
         .shortcut-item:nth-child(2) { animation-delay: 1.05s; }
         .shortcut-item:nth-child(3) { animation-delay: 1.1s; }
@@ -295,7 +295,7 @@
             box-shadow: 0 0 15px var(--accent-glow);
         }
         
-        /* --- כפתור הפעלה --- */
+        /* --- Launch Button --- */
 .launch-button {
     margin-top: 4vh;
     margin-bottom: 4vh;
@@ -382,12 +382,12 @@
     </div>
 
 <script>
-// אין צורך לשנות את הלוגיקה של הסקריפט, הוא עדיין יעבוד מצוין
-// עם מבנה ה-HTML וה-ID הקיימים.
+// No need to change the script's logic, it will still work perfectly
+// with the existing HTML structure and IDs.
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.electronAPI) { 
         console.error("Electron API not found! Displaying default shortcuts.");
-        // ניתן להציג כאן קיצורי דרך ברירת מחדל למקרה שה-API לא זמין
+        // Default shortcuts can be displayed here in case the API is not available
         const defaults = {
             'shortcut-key-showHide': 'Ctrl+Shift+G',
             'shortcut-key-quit': 'Ctrl+Q',
@@ -404,21 +404,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return; 
     }
 
-    // פונקציה להתאמת גודל הפונט של מקשי הקיצור כדי למנוע גלישה
+    // Function to adjust the font size of shortcut keys to prevent overflow
     const adjustFontSize = (element) => {
         const MAX_FONT_SIZE = 14;
         const MIN_FONT_SIZE = 8;
         let currentSize = MAX_FONT_SIZE;
         element.style.fontSize = `${currentSize}px`;
 
-        // הקטנת הפונט אם הטקסט רחב יותר מהאלמנט
+        // Decrease font size if the text is wider than the element
         while (element.scrollWidth > element.clientWidth && currentSize > MIN_FONT_SIZE) {
             currentSize -= 0.5;
             element.style.fontSize = `${currentSize}px`;
         }
     };
 
-    // פונקציה לסנכרון קיצורי הדרך מההגדרות לתצוגה
+    // Function to sync shortcuts from settings to the display
     const syncShortcuts = (settings) => {
         const elementsToUpdate = [
             { id: 'shortcut-key-showHide', key: 'showHide' },
@@ -434,17 +434,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const element = document.getElementById(item.id);
             if (element && settings.shortcuts[item.key]) {
                 element.textContent = settings.shortcuts[item.key];
-                element.style.fontSize = ''; // איפוס לפני התאמה
+                element.style.fontSize = ''; // Reset before adjusting
                 adjustFontSize(element);
             }
         });
     };
 
-    // קריאה ראשונית להגדרות ורישום להאזנה לעדכונים
+    // Initial call to get settings and register to listen for updates
     window.electronAPI.getSettings().then(syncShortcuts);
     window.electronAPI.onSettingsUpdated(syncShortcuts);
     
-    // התאמת גודל הפונט באופן דינמי גם בשינוי גודל החלון
+    // Dynamically adjust font size also on window resize
     new ResizeObserver(() => {
         document.querySelectorAll('.shortcut-key[id]').forEach(el => {
              el.style.fontSize = '';
@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }).observe(document.body);
 
-    // הוספת Event Listeners לכפתורים
+    // Add Event Listeners to buttons
     document.getElementById('settings-button').addEventListener('click', () => window.electronAPI.openSettingsWindow());
     document.getElementById('launch-button').addEventListener('click', () => window.electronAPI.completeOnboarding());
 });

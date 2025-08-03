@@ -1,8 +1,8 @@
-// בקובץ preload.js
+// In preload.js
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // קריאות מ-Renderer ל-Main
+  // Calls from Renderer to Main
   completeOnboarding: () => ipcRenderer.send('onboarding-complete'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   updateSetting: (key, value) => ipcRenderer.send('update-setting', key, value),
@@ -19,7 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 });
 
-// A. הוספת קוד לקריאת כותרת הצ'אט
+// A. Added code to read the chat title
 contextBridge.exposeInMainWorld('chatAPI', {
   onTitleUpdate: (callback) => ipcRenderer.on('update-title', (event, ...args) => callback(...args)),
 });
@@ -27,9 +27,9 @@ contextBridge.exposeInMainWorld('chatAPI', {
 let lastTitle = '';
 
 setInterval(() => {
-    // בודק את הכותרת מה-DOM של עמוד ה-Gemini
+    // Checks the title from the DOM of the Gemini page
     const titleElement = document.querySelector('.conversation.selected .conversation-title');
-    let currentTitle = 'New Chat'; // ערך ברירת מחדל אם אין צ'אט פתוח או כותרת
+    let currentTitle = 'New Chat'; // Default value if there is no open chat or title
     if (titleElement) {
         currentTitle = titleElement.textContent.trim();
     }
@@ -38,4 +38,4 @@ setInterval(() => {
         lastTitle = currentTitle;
         ipcRenderer.send('update-title', currentTitle);
     }
-}, 1000); // בודק כל שנייה
+}, 1000); // Checks every second
