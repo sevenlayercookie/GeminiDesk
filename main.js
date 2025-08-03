@@ -421,66 +421,88 @@ function loadGemini(targetWin) {
 // Animation and Resizing Functions (Unchanged from original)
 // ================================================================= //
 
-async function setCanvasMode(isCanvas, targetWin = null) {
-  const activeWin = targetWin || BrowserWindow.getFocusedWindow();
-  if (!activeWin || isCanvas === activeWin.isCanvasActive) return;
+async function setCanvasMode(isCanvas, targetWin) {
+  if (!targetWin || targetWin.isDestroyed() || isCanvas === targetWin.isCanvasActive) {
+    return;
+  }
 
-  const activeView = activeWin.getBrowserView();
-  if (!activeView) return;
-
-  activeWin.isCanvasActive = isCanvas;
-  const currentBounds = activeWin.getBounds();
-  if (activeWin.isMinimized()) activeWin.restore();
+  const activeView = targetWin.getBrowserView();
+  targetWin.isCanvasActive = isCanvas;
+  const currentBounds = targetWin.getBounds();
+  if (targetWin.isMinimized()) targetWin.restore();
 
   let scrollY = 0;
-  try {
-    scrollY = await activeView.webContents.executeJavaScript(`(document.scrollingElement || document.documentElement).scrollTop`);
-  } catch (e) { console.error('Could not read scroll position:', e); }
-
-  if (isCanvas) {
-    activeWin.prevBounds = { ...currentBounds };
-    const display  = screen.getDisplayMatching(currentBounds);
-    const workArea = display.workArea;
-    const targetWidth  = Math.min(canvasSize.width,  workArea.width - margin * 2);
-    const targetHeight = Math.min(canvasSize.height, workArea.height - margin * 2);
-    const newX = Math.max(workArea.x + margin, Math.min(currentBounds.x, workArea.x + workArea.width  - targetWidth  - margin));
-    const newY = Math.max(workArea.y + margin, Math.min(currentBounds.y, workArea.y + workArea.height - targetHeight - margin));
-    animateResize({ x: newX, y: newY, width: targetWidth, height: targetHeight }, activeWin, activeView);
-  } else {
-    if (activeWin.prevBounds) {
-      animateResize(activeWin.prevBounds, activeWin, activeView);
-      activeWin.prevBounds = null;
-    } else {
-      animateResize({ ...originalSize, x: currentBounds.x, y: currentBounds.y }, activeWin, activeView);
-      activeWin.center();
+  if (activeView) {
+    try {
+      scrollY = await activeView.webContents.executeJavaScript(`(document.scrollingElement || document.documentElement).scrollTop`);
+    } catch (e) {
+      console.error('Could not read scroll position:', e);
     }
   }
-  setTimeout(() => {
-    if (activeView && activeView.webContents) {
-      activeView.webContents.executeJavaScript(`(document.scrollingElement || document.documentElement).scrollTop = ${scrollY};`).catch(console.error);
+
+  if (isCanvas) {
+    if (!activeView) {
+      console.warn("Canvas mode requested, but no active view found. Aborting.");
+      targetWin.isCanvasActive = false;
+      return;
     }
-  }, 300);
+
+    targetWin.prevBounds = { ...currentBounds };
+    const display = screen.getDisplayMatching(currentBounds);
+    const workArea = display.workArea;
+    const targetWidth = Math.min(canvasSize.width, workArea.width - margin * 2);
+    const targetHeight = Math.min(canvasSize.height, workArea.height - margin * 2);
+    const newX = Math.max(workArea.x + margin, Math.min(currentBounds.x, workArea.x + workArea.width - targetWidth - margin));
+    const newY = Math.max(workArea.y + margin, Math.min(currentBounds.y, workArea.y + workArea.height - targetHeight - margin));
+
+    animateResize({ x: newX, y: newY, width: targetWidth, height: targetHeight }, targetWin, activeView);
+  } else {
+    if (targetWin.prevBounds) {
+      animateResize(targetWin.prevBounds, targetWin, activeView);
+      targetWin.prevBounds = null;
+    } else {
+      const newBounds = { ...originalSize, x: currentBounds.x, y: currentBounds.y };
+      animateResize(newBounds, targetWin, activeView);
+      // Center window only when returning to default size
+      setTimeout(() => { if (targetWin && !targetWin.isDestroyed()) targetWin.center(); }, 210);
+    }
+  }
+
+  if (activeView) {
+    setTimeout(() => {
+      if (activeView && activeView.webContents && !activeView.webContents.isDestroyed()) {
+        activeView.webContents.executeJavaScript(`(document.scrollingElement || document.documentElement).scrollTop = ${scrollY};`).catch(console.error);
+      }
+    }, 300);
+  }
 }
 function animateResize(targetBounds, activeWin, activeView, duration_ms = 200) {
-  if (!activeWin || !activeView) return; // Extra protection
+  if (!activeWin || activeWin.isDestroyed()) return;
 
   const start = activeWin.getBounds();
   const steps = 20;
   const interval = duration_ms / steps;
   const delta = {
-    x: (targetBounds.x - start.x) / steps, y: (targetBounds.y - start.y) / steps,
-    width: (targetBounds.width - start.width) / steps, height: (targetBounds.height - start.height) / steps
+    x: (targetBounds.x - start.x) / steps,
+    y: (targetBounds.y - start.y) / steps,
+    width: (targetBounds.width - start.width) / steps,
+    height: (targetBounds.height - start.height) / steps
   };
   let i = 0;
+
   function step() {
     i++;
     const b = {
-      x: Math.round(start.x + delta.x * i), y: Math.round(start.y + delta.y * i),
-      width: Math.round(start.width + delta.width * i), height: Math.round(start.height + delta.height * i)
+      x: Math.round(start.x + delta.x * i),
+      y: Math.round(start.y + delta.y * i),
+      width: Math.round(start.width + delta.width * i),
+      height: Math.round(start.height + delta.height * i)
     };
     if (activeWin && !activeWin.isDestroyed()) {
       activeWin.setBounds(b);
-      activeView.setBounds({ x:0, y:30, width:b.width, height:b.height-30 });
+      if (activeView && activeView.webContents && !activeView.webContents.isDestroyed()) {
+        activeView.setBounds({ x: 0, y: 30, width: b.width, height: b.height - 30 });
+      }
       if (i < steps) setTimeout(step, interval);
     }
   }
@@ -741,9 +763,22 @@ ipcMain.on('onboarding-complete', (event) => {
     }
   }
 });
-
 ipcMain.on('canvas-state-changed', (event, isCanvasVisible) => {
-    setCanvasMode(isCanvasVisible);
+    const senderWebContents = event.sender;
+
+    for (const window of BrowserWindow.getAllWindows()) {
+        if (window.isDestroyed()) continue;
+
+        const view = window.getBrowserView();
+        
+        if ((view && view.webContents.id === senderWebContents.id) || 
+            (window.webContents.id === senderWebContents.id)) {
+            
+            setCanvasMode(isCanvasVisible, window);
+            return;
+        }
+    }
+    console.warn(`Could not find a window associated with the 'canvas-state-changed' event.`);
 });
 
 ipcMain.on('update-title', (event, title) => {
