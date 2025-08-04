@@ -27,10 +27,6 @@
   <em>GeminiDesk transforms your AI interaction from a clumsy browser dance into a native desktop symphony. No more clutter. No more distractions. Just pure, unadulterated productivity with a sprinkle of magic.</em>
 </p>
 
-<p align="center">
-  <img src="https://i.imgur.com/your-gif-url.gif" alt="GeminiDesk Demo">
-</p>
-
 ---
 
 ## ✨ Why Settle for a Tab When You Can Have a Throne? ✨
