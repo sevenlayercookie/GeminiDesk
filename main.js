@@ -20,7 +20,7 @@ const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settingsWin = null;
 const defaultSettings = {
   onboardingShown: false,
-  autoStart: true,
+  autoStart: false,
   alwaysOnTop: true,
   shortcuts: {
     showHide: 'Alt+G',
@@ -290,27 +290,43 @@ function registerShortcuts() {
 
     const shortcuts = settings.shortcuts;
 
-    // ================================================================= //
-    // Fix #1: Hide/Show all windows together
-    // ================================================================= //
-    if (shortcuts.showHide) {
-        globalShortcut.register(shortcuts.showHide, () => {
-            const allWindows = BrowserWindow.getAllWindows();
-            if (allWindows.length === 0) return;
+let lastFocusedWindow = null;
 
-            // Check the visibility state of the first window
-            const shouldShow = !allWindows[0].isVisible();
+if (shortcuts.showHide) {
+    globalShortcut.register(shortcuts.showHide, () => {
+        const allWindows = BrowserWindow.getAllWindows();
+        if (allWindows.length === 0) return;
 
-            // Apply the action to all windows
-            allWindows.forEach(win => {
-                if (shouldShow) {
-                    win.show();
-                } else {
-                    win.hide();
-                }
-            });
+        // בדוק אם לפחות חלון אחד גלוי. אם כן, נסתיר את כולם.
+        // אם כולם מוסתרים, נציג את כולם.
+        const shouldShow = allWindows.some(win => !win.isVisible());
+
+        if (!shouldShow) {
+            // לפני הסתרה - שמור את החלון שנמצא כרגע בפוקוס
+            lastFocusedWindow = allWindows.find(w => w.isFocused()) || allWindows[0];
+        }
+
+        allWindows.forEach(win => {
+            if (shouldShow) {
+                if (win.isMinimized()) win.restore();
+                win.show();
+            } else {
+                win.hide();
+            }
         });
-    }
+
+        // לאחר שהצגנו את כל החלונות, נחזיר את הפוקוס לחלון האחרון שהיה פעיל
+        if (shouldShow && lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
+            setTimeout(() => {
+                lastFocusedWindow.focus();
+                const view = lastFocusedWindow.getBrowserView();
+                if (view && view.webContents && !view.webContents.isDestroyed()) {
+                    view.webContents.focus();
+                }
+            }, 150);
+        }
+    });
+}
 
     if (shortcuts.newChatPro) {
         globalShortcut.register(shortcuts.newChatPro, () => createNewChatWithModel('Pro'));
@@ -345,84 +361,96 @@ function registerShortcuts() {
         });
     }
 
-    if (shortcuts.screenshot) {
-        // ... (Screenshot code remains unchanged) ...
-        // (Keep the existing screenshot logic as is)
-        let isScreenshotProcessActive = false;
-
-        globalShortcut.register(shortcuts.screenshot, () => {
-            if (isQuitting || isScreenshotProcessActive) {
-                return;
-            }
-            isScreenshotProcessActive = true;
-
-            // Use the active window or create a new one
-            let targetWin = BrowserWindow.getFocusedWindow();
-            if (!targetWin) {
-                createWindow();
-                // Wait for the new window to be ready
-                targetWin = BrowserWindow.getAllWindows().pop();
-                targetWin.once('ready-to-show', () => {
-                    proceedWithScreenshot(targetWin);
-                });
+if (shortcuts.screenshot) {
+    let isScreenshotProcessActive = false;
+    let screenshotTargetWindow = null;
+    
+    globalShortcut.register(shortcuts.screenshot, () => {
+        if (isQuitting || isScreenshotProcessActive) {
+            return;
+        }
+        isScreenshotProcessActive = true;
+        
+        // אם כל החלונות מוסתרים, קח את החלון האחרון שהיה פעיל
+        let targetWin = BrowserWindow.getFocusedWindow();
+        if (!targetWin) {
+            // אם אין חלון בפוקוس, נסה את החלון האחרון שהיה פעיל (מהמשתנה של showHide)
+            if (lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
+                targetWin = lastFocusedWindow;
             } else {
-                proceedWithScreenshot(targetWin);
+                // אם גם זה לא עובד, קח את הראשון מהרשימה
+                const allWindows = BrowserWindow.getAllWindows();
+                targetWin = allWindows.length > 0 ? allWindows[0] : null;
             }
+        }
+        
+        if (!targetWin) {
+            isScreenshotProcessActive = false;
+            return;
+        }
+        
+        screenshotTargetWindow = targetWin;
+        proceedWithScreenshot();
+    });
+
+    function proceedWithScreenshot() {
+        clipboard.clear();
+        const snippingTool = spawn('explorer', ['ms-screenclip:'], { detached: true, stdio: 'ignore' });
+        snippingTool.unref();
+        let processExited = false;
+        snippingTool.on('exit', () => {
+            processExited = true;
         });
-
-        function proceedWithScreenshot(winInstance) {
-            clipboard.clear();
-            const wasVisible = winInstance.isVisible();
-            const snippingTool = spawn('explorer', ['ms-screenclip:'], { detached: true, stdio: 'ignore' });
-            snippingTool.unref();
-            snippingTool.on('error', (err) => {
-                console.error('Failed to start snipping tool:', err);
-                isScreenshotProcessActive = false;
-            });
-            let checkAttempts = 0;
-            const maxAttempts = 60;
-            const intervalId = setInterval(() => {
-                if (checkAttempts++ > maxAttempts || (!winInstance || winInstance.isDestroyed())) {
-                    clearInterval(intervalId);
-                    isScreenshotProcessActive = false;
-                    return;
-                }
-                const image = clipboard.readImage();
-                if (!image.isEmpty()) {
-                    clearInterval(intervalId);
-                    if (winInstance && !winInstance.isDestroyed()) {
-                        if (!winInstance.isVisible()) winInstance.show();
-                        if (winInstance.isMinimized()) winInstance.restore();
-                        winInstance.setAlwaysOnTop(true);
-                        winInstance.focus();
-                        winInstance.moveTop();
-setTimeout(() => {
-    const viewInstance = winInstance.getBrowserView();
-    if (winInstance && !winInstance.isDestroyed() && viewInstance && viewInstance.webContents) {
-        viewInstance.webContents.focus();
-        viewInstance.webContents.paste();
-        console.log('Screenshot pasted from clipboard!');
-
-        // Restore the "always on top" setting to its original state
-        winInstance.setAlwaysOnTop(settings.alwaysOnTop);
-
-        // Fix: Add a short delay to allow Windows to react
-        setTimeout(() => {
-            if (winInstance && !winInstance.isDestroyed()) {
-                winInstance.focus();
-                winInstance.moveTop();
-            }
-        }, 50); // A very short delay of 50 milliseconds
-    }
-    isScreenshotProcessActive = false;
-}, 200);
-                    } else {
-                        isScreenshotProcessActive = false;
+        
+        snippingTool.on('error', (err) => {
+            console.error('Failed to start snipping tool:', err);
+            isScreenshotProcessActive = false;
+        });
+        
+        let checkAttempts = 0;
+        const maxAttempts = 60;
+        const intervalId = setInterval(() => {
+            const image = clipboard.readImage();
+            
+            if (!image.isEmpty() && processExited) {
+                clearInterval(intervalId);
+                
+                if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
+                    // וודא שהחלון נראה ובפוקוס
+                    if (!screenshotTargetWindow.isVisible()) screenshotTargetWindow.show();
+                    if (screenshotTargetWindow.isMinimized()) screenshotTargetWindow.restore();
+                    
+                    // קבע זמנית alwaysOnTop כדי למנוע הסתרה
+                    const originalAlwaysOnTop = screenshotTargetWindow.isAlwaysOnTop();
+                    screenshotTargetWindow.setAlwaysOnTop(true);
+                    screenshotTargetWindow.focus();
+                    
+                    const viewInstance = screenshotTargetWindow.getBrowserView();
+                    if (viewInstance && viewInstance.webContents) {
+                        setTimeout(() => {
+                            viewInstance.webContents.focus();
+                            viewInstance.webContents.paste();
+                            console.log('Screenshot pasted!');
+                            
+                            // החזר את ההגדרה המקורית של alwaysOnTop
+                            setTimeout(() => {
+                                if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
+                                    screenshotTargetWindow.setAlwaysOnTop(settings.alwaysOnTop);
+                                }
+                            }, 500);
+                        }, 200);
                     }
                 }
-            }, 500);
-        }
+                isScreenshotProcessActive = false;
+                screenshotTargetWindow = null;
+            } else if (checkAttempts++ > maxAttempts) {
+                clearInterval(intervalId);
+                isScreenshotProcessActive = false;
+                screenshotTargetWindow = null;
+            }
+        }, 500);
     }
+}
 // Add shortcut for search
     if (shortcuts.search) {
         globalShortcut.register(shortcuts.search, () => {
@@ -459,9 +487,20 @@ function createWindow() {
     if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
   });
   
-  newWin.on('focus', () => {
+newWin.on('focus', () => {
     if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
-  });
+
+    // רק אם החלון באמת הוא החלון הפעיל, תן פוקוס ל-webContents
+    setTimeout(() => {
+        if (newWin && !newWin.isDestroyed() && newWin.isFocused()) {
+            const view = newWin.getBrowserView();
+            if (view && view.webContents && !view.webContents.isDestroyed()) {
+                // בדוק שאף חלון אחר לא מנסה לקחת פוקוס באותו זמן
+                view.webContents.focus();
+            }
+        }
+    }, 100);
+});
 
   newWin.on('closed', () => {
     detachedViews.delete(newWin);
@@ -677,13 +716,30 @@ function handleFileOpen(filePath) {
             // For other files (PDF, TXT, etc.), we put the file on the clipboard
             // This mimics the "Copy" action in the file explorer.
             // Note: This works reliably on Windows. macOS/Linux support can vary.
-            if (process.platform === 'win32') {
-                const command = `Set-Clipboard -Path "${filePath.replace(/"/g, '""')}"`;
-                spawn('powershell.exe', ['-Command', command]);
-            } else {
-                 // On macOS and Linux, we use the standard clipboard API which might be less reliable for files
-                clipboard.write({ text: filePath });
-            }
+if (process.platform === 'win32') {
+  // 1. בונים את מבנה ה-DROPFILES (20 בתים)  
+  const dropFilesStruct = Buffer.alloc(20);
+  // pFiles = 20 (היסט השורה הראשונה שבה מתחיל רשימת השמות)
+  dropFilesStruct.writeUInt32LE(20, 0);
+  // fWide = 1 (UTF-16)
+  dropFilesStruct.writeUInt32LE(1, 16);
+
+  // 2. כותבים את השם (Unicode, null-terminated)
+  const utf16Path = filePath + '\0';
+  const pathBuffer = Buffer.from(utf16Path, 'ucs2');
+  
+  // 3. מסיימים ב-double-null כדי לסמן סוף הרשימה
+  const terminator = Buffer.from('\0\0', 'ucs2');
+
+  // 4. מאחדים הכל ויוצקים ל-clipboard
+  const dropBuffer = Buffer.concat([dropFilesStruct, pathBuffer, terminator]);
+  clipboard.writeBuffer('CF_HDROP', dropBuffer);
+
+} else {
+  // macOS/Linux או כ fallback: רק טקסט
+  clipboard.write({ text: filePath });
+}
+
         }
 
         // Give the OS a moment to process the clipboard command
@@ -711,7 +767,22 @@ function handleFileOpen(filePath) {
         }
     }
 }
-
+ipcMain.on('toggle-full-screen', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+        if (win.isMaximized()) {
+            win.unmaximize();
+            // החזר את מצב "תמיד למעלה" המקורי מההגדרות
+            win.setAlwaysOnTop(settings.alwaysOnTop);
+            win.focus(); // ודא שהחלון נשאר בפוקוס
+        } else {
+            // כבה זמנית את "תמיד למעלה" לפני ההגדלה
+            win.setAlwaysOnTop(false);
+            win.maximize();
+            win.focus(); // ודא שהחלון נשאר בפוקוס
+        }
+    }
+});
 // ================================================================= //
 // App Lifecycle
 // ================================================================= //
@@ -730,6 +801,36 @@ const ses = session.defaultSession;
       callback(false);
     }
   });
+  
+  // פתרון לבעיית צילום מסך של Windows שגורם לחלונות להעלם
+  const preventWindowHiding = () => {
+    const allWindows = BrowserWindow.getAllWindows();
+    allWindows.forEach(win => {
+      if (win && !win.isDestroyed() && win.isVisible()) {
+        // שמור את המצב הנוכחי ומנע מהחלון להסתתר
+        win.setAlwaysOnTop(true);
+        setTimeout(() => {
+          if (win && !win.isDestroyed()) {
+            win.setAlwaysOnTop(settings.alwaysOnTop);
+          }
+        }, 3000); // שחזר אחרי 3 שניות
+      }
+    });
+  };
+
+  // האזן לאירועי מערכת שיכולים לגרום לחלונות להעלם
+  app.on('browser-window-blur', () => {
+    // בדוק אם זה בגלל Snipping Tool
+    setTimeout(() => {
+      const allWindows = BrowserWindow.getAllWindows();
+      const visibleWindows = allWindows.filter(w => w && !w.isDestroyed() && w.isVisible());
+      if (visibleWindows.length === 0) {
+        // כל החלונות נעלמו - כנראה בגלל Snipping Tool
+        preventWindowHiding();
+      }
+    }, 100);
+  });
+
   registerShortcuts();
   if (settings.autoStart) setAutoLaunch(true);
 autoUpdater.autoDownload = false;
