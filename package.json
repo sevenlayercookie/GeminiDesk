@@ -32,6 +32,7 @@
       "settings.html",
       "confirm-reset.html",
       "update-available.html",
+      "download-progress.html",
       "icon1.png",
       "node_modules/auto-launch",
       "package.json"

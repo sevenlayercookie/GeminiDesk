@@ -9,6 +9,7 @@ const https = require('https'); // לביצוע בקשת API ל-GitHub
 let confirmWin = null;
 let isQuitting = false;
 let updateWin = null;
+let downloadWin = null;
 const autoLauncher = new AutoLaunch({
     name: 'GeminiApp',
     path: app.getPath('exe'),
@@ -968,20 +969,8 @@ autoUpdater.on('download-progress', (progressObj) => {
   sendUpdateStatus('downloading', { percent: Math.round(progressObj.percent) });
 });
 
-autoUpdater.on('update-downloaded', (info) => {
+autoUpdater.on('update-downloaded', () => {
   sendUpdateStatus('downloaded');
-  // Ask the user if they want to install now
-  dialog.showMessageBox({
-    type: 'info',
-    title: 'Update Ready',
-    message: 'A new version has been downloaded. Restart the application to apply the updates.',
-    buttons: ['Restart Now', 'Later']
-  }).then((buttonIndex) => {
-    if (buttonIndex.response === 0) {
-      autoUpdater.quitAndInstall();
-    }
-    // If the user chose "Later", the update will be installed automatically on the next quit
-  });
 });
 
 
@@ -1002,6 +991,42 @@ ipcMain.on('close-update-window', () => {
   if (updateWin) {
     updateWin.close();
   }
+});
+ipcMain.on('start-download-update', () => {
+  const parentWindow = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+  if (updateWin) {
+    updateWin.close();
+  }
+  if (downloadWin) {
+    downloadWin.focus();
+  } else {
+    downloadWin = new BrowserWindow({
+      width: 360,
+      height: 180,
+      frame: false,
+      resizable: false,
+      alwaysOnTop: true,
+      parent: parentWindow,
+      modal: true,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        contextIsolation: true,
+      }
+    });
+    downloadWin.loadFile('download-progress.html');
+    downloadWin.on('closed', () => {
+      downloadWin = null;
+    });
+  }
+  autoUpdater.downloadUpdate();
+});
+ipcMain.on('close-download-window', () => {
+  if (downloadWin) {
+    downloadWin.close();
+  }
+});
+ipcMain.on('install-update-now', () => {
+  autoUpdater.quitAndInstall();
 });
 ipcMain.on('open-new-window', () => {
   createWindow();
@@ -1171,16 +1196,5 @@ ipcMain.on('open-settings-window', (event) => { // Added the event word
 
   settingsWin.on('closed', () => {
     settingsWin = null;
-  });
-});
-
-autoUpdater.on('update-downloaded', () => {
-  dialog.showMessageBox({
-    type: 'info', 
-    title: 'Update Ready', 
-    message: 'Install the new version now?',
-    buttons: ['Restart Now', 'Later']
-  }).then(result => { 
-    if (result.response === 0) autoUpdater.quitAndInstall(); 
   });
 });
