@@ -1,356 +1,132 @@
 <!DOCTYPE html>
-<html lang="en" class="dark-mode">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini AI Desktop</title>
+    <title>GeminiDesk - Your AI Powerhouse</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- Import Fonts --- */
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-
-        /* --- CSS Variables for Theming --- */
-        :root {
-            --ease-1: cubic-bezier(0.25, 1, 0.5, 1);
-            --ease-2: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        html.dark-mode {
-            --bg-primary: #0a0a1a;
-            --bg-secondary: #1a1a3a;
-            --bg-tertiary: #2a2a5a;
-            --text-primary: #e0e0ff;
-            --text-secondary: #a0a0cc;
-            --accent-primary: #8a2be2; /* BlueViolet */
-            --accent-secondary: #00e5ff; /* Cyan */
-            --glow-color: rgba(138, 43, 226, 0.6);
-            --border-color: rgba(138, 43, 226, 0.2);
-            --code-bg: #1e1e4e;
-            --code-text: #d0d0ff;
-            --shadow-color: rgba(0, 0, 0, 0.5);
-        }
-
-        html.light-mode {
-            --bg-primary: #f0f2f5;
-            --bg-secondary: #ffffff;
-            --bg-tertiary: #e9ecef;
-            --text-primary: #1c1e21;
-            --text-secondary: #555e68;
-            --accent-primary: #6a0dad; /* A darker purple for contrast */
-            --accent-secondary: #007bff;
-            --glow-color: rgba(106, 13, 173, 0.4);
-            --border-color: rgba(0, 0, 0, 0.1);
-            --code-bg: #e8e8e8;
-            --code-text: #222;
-            --shadow-color: rgba(0, 0, 0, 0.1);
-        }
-
-        /* --- Base & Reset --- */
+        /* ------------------- */
+        /* --- CSS Reset --- */
+        /* ------------------- */
         *, *::before, *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
 
+        /* ------------------- */
+        /* --- Variables & Theme --- */
+        /* ------------------- */
+        :root {
+            --bg-color: #0d0c1d;
+            --text-color: #e0e0e0;
+            --primary-color: #8ab4f8;
+            --secondary-color: #c58af9;
+            --accent-color: #81c995;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --code-bg: #1e1e2e;
+            --header-bg: rgba(13, 12, 29, 0.8);
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --scroll-thumb-color: var(--primary-color);
+            --scroll-track-color: var(--code-bg);
+        }
+
+        html.light-mode {
+            --bg-color: #f5f5f7;
+            --text-color: #1d1d1f;
+            --primary-color: #0071e3;
+            --secondary-color: #512da8;
+            --accent-color: #2e7d32;
+            --card-bg: #ffffff;
+            --card-border: #e0e0e0;
+            --code-bg: #f0f0f0;
+            --header-bg: rgba(245, 245, 247, 0.8);
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* ------------------- */
+        /* --- Base Styles --- */
+        /* ------------------- */
         html {
             scroll-behavior: smooth;
         }
 
         body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            transition: background-color 0.5s var(--ease-2), color 0.5s var(--ease-2);
-            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             line-height: 1.7;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
+        /* Custom Scrollbar */
+        body::-webkit-scrollbar {
+            width: 10px;
+        }
+        body::-webkit-scrollbar-track {
+            background: var(--scroll-track-color);
+        }
+        body::-webkit-scrollbar-thumb {
+            background-color: var(--scroll-thumb-color);
+            border-radius: 20px;
+            border: 3px solid var(--scroll-track-color);
+        }
+
+        /* ------------------- */
         /* --- Animated Background --- */
-        body::before {
-            content: '';
+        /* ------------------- */
+        #particle-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             z-index: -1;
-            background: radial-gradient(circle at top left, var(--accent-primary), transparent 40%),
-                        radial-gradient(circle at bottom right, var(--accent-secondary), transparent 40%);
-            animation: background-pan 20s infinite alternate;
-            opacity: 0.2;
+            opacity: 0.5;
         }
 
-        @keyframes background-pan {
-            from { background-position: 0% 0%; }
-            to { background-position: 100% 100%; }
-        }
-
-        /* --- Main Container & Layout --- */
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        /* --- Scroll-Reveal Animation --- */
-        .reveal {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.8s var(--ease-1), transform 0.8s var(--ease-1);
-        }
-
-        .reveal.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* --- Typography & Content --- */
-        h1, h2, h3 {
-            color: var(--text-primary);
-            font-weight: 700;
-            margin-bottom: 1rem;
-            letter-spacing: -1px;
-            text-shadow: 0 0 10px var(--glow-color);
-            animation: text-flicker 5s infinite alternate;
-        }
-
-        h1 {
-            font-size: clamp(2.5rem, 5vw, 4rem);
-            text-align: center;
-            background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary), var(--accent-secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: gradient-flow 10s linear infinite, text-flicker 5s infinite alternate;
-            background-size: 200% 200%;
-        }
-
-        h1 .icon {
-            display: inline-block;
-            animation: icon-float 3s ease-in-out infinite;
-            -webkit-text-fill-color: initial; /* Restore color for emoji */
-            margin-right: 0.5rem;
-        }
-
-        @keyframes icon-float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        @keyframes text-flicker {
-            0%, 19.9%, 22%, 62.9%, 64%, 64.9%, 70%, 100% {
-                opacity: 0.99;
-                text-shadow: 0 0 10px var(--glow-color), 0 0 20px var(--glow-color), 0 0 30px var(--accent-primary), 0 0 40px var(--accent-primary), 0 0 50px var(--accent-primary);
-            }
-            20%, 21.9%, 63%, 63.9%, 65%, 69.9% {
-                opacity: 0.4;
-                text-shadow: none;
-            }
-        }
-        
-        @keyframes gradient-flow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        h2 {
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
-            margin-top: 3rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--border-color);
-            position: relative;
-        }
-        
-        h2::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -2px;
-            width: 80px;
-            height: 2px;
-            background: var(--accent-primary);
-            box-shadow: 0 0 10px var(--glow-color);
-            animation: h2-underline-anim 5s infinite alternate;
-        }
-
-        @keyframes h2-underline-anim {
-            from { width: 80px; }
-            to { width: 150px; }
-        }
-
-        p, li {
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-            font-size: 1.1rem;
-            font-weight: 300;
-        }
-
-        strong {
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-
-        a {
-            color: var(--accent-secondary);
-            text-decoration: none;
-            position: relative;
-            transition: color 0.3s var(--ease-2);
-        }
-
-        a::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            transform: scaleX(0);
-            height: 1px;
-            bottom: -2px;
-            left: 0;
-            background-color: var(--accent-secondary);
-            transform-origin: bottom right;
-            transition: transform 0.3s var(--ease-2);
-        }
-
-        a:hover {
-            color: var(--text-primary);
-            text-shadow: 0 0 8px var(--accent-secondary);
-        }
-        
-        a:hover::after {
-            transform: scaleX(1);
-            transform-origin: bottom left;
-        }
-
-        hr {
-            border: none;
-            height: 1px;
-            background: linear-gradient(to right, transparent, var(--border-color), transparent);
-            margin: 4rem 0;
-        }
-
-        blockquote {
-            background-color: var(--bg-secondary);
-            border-left: 4px solid var(--accent-primary);
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            transition: background-color 0.5s var(--ease-2), border-color 0.5s var(--ease-2);
-        }
-
-        blockquote p {
-            margin-bottom: 0;
-            font-style: italic;
-        }
-
-        /* --- Specific Components --- */
-        .center-text { text-align: center; }
-
-        .badges {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin: 1.5rem 0;
-            flex-wrap: wrap;
-        }
-
-        .badges img {
-            transition: transform 0.3s var(--ease-1), box-shadow 0.3s var(--ease-1);
-            border-radius: 4px;
-        }
-
-        .badges img:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 8px 25px var(--glow-color);
-        }
-
-        /* --- Table Styling --- */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 2rem 0;
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px var(--shadow-color);
-            transition: background-color 0.5s var(--ease-2);
-        }
-
-        th, td {
-            padding: 1rem 1.5rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-            transition: border-color 0.5s var(--ease-2);
-        }
-
-        thead th {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            font-weight: 600;
-            transition: background-color 0.5s var(--ease-2);
-        }
-
-        tbody tr {
-            transition: background-color 0.3s var(--ease-2);
-        }
-        
-        tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        tbody tr:hover {
-            background-color: var(--bg-tertiary);
-        }
-
-        /* --- Code Block Styling --- */
-        pre {
-            background-color: var(--code-bg);
-            padding: 1.5rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 1.5rem 0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.95rem;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 20px var(--shadow-color);
-            position: relative;
-        }
-
-        code {
-            font-family: 'Courier New', Courier, monospace;
-            background-color: var(--code-bg);
-            color: var(--code-text);
-            padding: 0.2em 0.4em;
-            border-radius: 4px;
-        }
-        
-        pre code {
-            padding: 0;
-            background: none;
-        }
-
-        /* --- Theme Toggler Switch --- */
-        .theme-switch-wrapper {
+        /* ------------------- */
+        /* --- Header & Theme Toggle --- */
+        /* ------------------- */
+        .header {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 100;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: var(--header-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
         }
 
         .theme-switch {
             display: inline-block;
-            height: 34px;
+            height: 24px;
             position: relative;
-            width: 60px;
+            width: 50px;
         }
 
         .theme-switch input {
-            display: none;
+            display:none;
         }
 
         .slider {
-            background-color: var(--bg-tertiary);
+            background-color: #333;
             bottom: 0;
             cursor: pointer;
             left: 0;
@@ -359,338 +135,665 @@
             top: 0;
             transition: .4s;
             border-radius: 34px;
-            border: 1px solid var(--border-color);
         }
 
         .slider:before {
             background-color: #fff;
             bottom: 4px;
             content: "";
-            height: 26px;
+            height: 16px;
             left: 4px;
             position: absolute;
             transition: .4s;
-            width: 26px;
+            width: 16px;
             border-radius: 50%;
         }
 
         input:checked + .slider {
-            background-color: var(--accent-primary);
+            background-color: var(--primary-color);
         }
 
         input:checked + .slider:before {
             transform: translateX(26px);
         }
         
-        /* Sun/Moon Icons */
-        .slider::after {
-            content: '🌙'; /* Moon */
-            font-size: 16px;
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            transition: opacity 0.4s;
-            opacity: 1;
+        /* ------------------- */
+        /* --- Layout & Content --- */
+        /* ------------------- */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        section {
+            padding: 6rem 0;
+            border-bottom: 1px solid var(--card-border);
+        }
+        section:last-of-type {
+            border-bottom: none;
+        }
+
+        h1, h2, h3 {
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 2.5rem;
+            text-align: center;
         }
         
-        html.light-mode .slider::after {
-            opacity: 0;
+        h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
         }
 
-        .slider::before {
-             content: '☀️'; /* Sun */
-            font-size: 16px;
-            position: absolute;
-            left: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            transition: opacity 0.4s;
-            opacity: 0;
-            color: #f39c12;
-            height: auto;
-            width: auto;
-            background: transparent;
+        p {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            max-width: 65ch;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        html.light-mode .slider::before {
-            opacity: 1;
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* ------------------- */
+        /* --- Hero Section --- */
+        /* ------------------- */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding-top: 80px; /* Header height */
         }
         
-        html.light-mode .slider:before {
-             transform: translateX(26px) translateY(-50%);
+        .hero-logo {
+            width: 150px;
+            margin-bottom: 2rem;
+            animation: float 6s ease-in-out infinite;
         }
 
-        /* Re-style slider handle for light mode */
-        html.light-mode .slider:before {
-            background-color: transparent;
+        .hero p {
+            font-size: 1.25rem;
+            color: #b0b0b0;
+        }
+        html.light-mode .hero p {
+            color: #555;
         }
 
-
-        /* Footer */
-        footer {
-            margin-top: 4rem;
-            padding: 2rem;
-            border-top: 1px solid var(--border-color);
+        .hero em {
+            font-style: normal;
             font-size: 1rem;
+            color: #999;
         }
-        footer strong {
-            font-size: 1.2rem;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { text-shadow: 0 0 4px var(--glow-color); }
-            50% { text-shadow: 0 0 16px var(--glow-color); }
-            100% { text-shadow: 0 0 4px var(--glow-color); }
+        html.light-mode .hero em {
+            color: #666;
         }
 
+        .badges {
+            margin: 1.5rem 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        /* ------------------- */
+        /* --- Features Section --- */
+        /* ------------------- */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 16px 40px 0 var(--shadow-color);
+        }
+        
+        .feature-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .feature-card svg {
+            width: 28px;
+            height: 28px;
+            stroke: var(--primary-color);
+            flex-shrink: 0;
+        }
+
+        /* ------------------- */
+        /* --- Shortcuts Table --- */
+        /* ------------------- */
+        .table-container {
+            overflow-x: auto;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+        th {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        td code {
+            background: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: var(--secondary-color);
+        }
+
+        /* ------------------- */
+        /* --- Code Blocks --- */
+        /* ------------------- */
+        .code-block-wrapper {
+            position: relative;
+        }
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--primary-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 0.5rem 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+        }
+        .code-block-wrapper:hover .copy-btn {
+            opacity: 1;
+        }
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ------------------- */
+        /* --- Footer --- */
+        /* ------------------- */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        html.light-mode footer {
+            color: #777;
+        }
+
+        /* ------------------- */
+        /* --- Animations --- */
+        /* ------------------- */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .animate-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Delay for staggered animations */
+        .features-grid .feature-card:nth-child(1) { transition-delay: 0.1s; }
+        .features-grid .feature-card:nth-child(2) { transition-delay: 0.2s; }
+        .features-grid .feature-card:nth-child(3) { transition-delay: 0.3s; }
+        .features-grid .feature-card:nth-child(4) { transition-delay: 0.1s; }
+        .features-grid .feature-card:nth-child(5) { transition-delay: 0.2s; }
+        .features-grid .feature-card:nth-child(6) { transition-delay: 0.3s; }
+        .features-grid .feature-card:nth-child(7) { transition-delay: 0.1s; }
+        .features-grid .feature-card:nth-child(8) { transition-delay: 0.2s; }
+        .features-grid .feature-card:nth-child(9) { transition-delay: 0.3s; }
+        .features-grid .feature-card:nth-child(10) { transition-delay: 0.1s; }
     </style>
 </head>
 <body>
 
-    <div class="theme-switch-wrapper">
-        <label class="theme-switch" for="theme-toggle">
-            <input type="checkbox" id="theme-toggle">
-            <span class="slider"></span>
-        </label>
-    </div>
+    <canvas id="particle-canvas"></canvas>
 
-    <div class="container">
-        <header class="center-text reveal">
-            <h1><span class="icon">🤖</span> Gemini AI Desktop</h1>
-            <p><strong>Desktop application for Google's Gemini AI</strong></p>
-            <div class="badges">
-                <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-                <a href="https://github.com/dortanes/gemini-desktop/releases"><img src="https://img.shields.io/github/release/dortanes/gemini-desktop.svg" alt="GitHub release"></a>
-                <a href="https://github.com/dortanes/gemini-desktop/releases"><img src="https://img.shields.io/github/downloads/dortanes/gemini-desktop/total.svg" alt="Downloads"></a>
+    <header class="header">
+        <div class="logo-container">
+            <!-- Can add a small logo here if desired -->
+        </div>
+        <div class="theme-switch-wrapper">
+            <label class="theme-switch" for="checkbox">
+                <input type="checkbox" id="checkbox" />
+                <div class="slider round"></div>
+            </label>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/icon.ico" alt="GeminiDesk Logo" class="hero-logo animate-on-scroll">
+            <h1 class="animate-on-scroll">🚀 GeminiDesk 🚀</h1>
+            <p class="animate-on-scroll" style="transition-delay: 0.1s;">
+                <strong>Tired of Gemini being just another browser tab? So were we.</strong>
+                <br />
+                We've liberated Google's AI from its browser cage and turned it into a sleek, powerful, and slightly mischievous desktop powerhouse.
+            </p>
+            <div class="badges animate-on-scroll" style="transition-delay: 0.2s;">
+                <a href="https://github.com/hillelkingqt/GeminiDesk/releases/latest">
+                    <img src="https://img.shields.io/github/v/release/hillelkingqt/GeminiDesk?style=for-the-badge&logo=github&label=Latest%20Release&color=8ab4f8" alt="Latest Release">
+                </a>
+                <a href="https://github.com/hillelkingqt/GeminiDesk/releases">
+                    <img src="https://img.shields.io/github/downloads/hillelkingqt/GeminiDesk/total?style=for-the-badge&logo=github&color=c58af9" alt="Total Downloads">
+                </a>
+                <a href="https://github.com/hillelkingqt/GeminiDesk/issues">
+                    <img src="https://img.shields.io/github/issues/hillelkingqt/GeminiDesk?style=for-the-badge&logo=github&color=81c995" alt="Issues">
+                </a>
+                <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows" alt="Platform: Windows">
             </div>
-            <hr>
-            <p><em>Transform your Gemini AI experience with a desktop application that brings Google's powerful AI assistant directly to your desktop with enhanced features and seamless integration.</em></p>
-        </header>
+            <p class="animate-on-scroll" style="transition-delay: 0.3s;">
+                <em>GeminiDesk transforms your AI interaction from a clumsy browser dance into a native desktop symphony. No more clutter. No more distractions. Just pure, unadulterated productivity with a sprinkle of magic.</em>
+            </p>
+        </section>
 
-        <main>
-            <section class="reveal">
-                <h2><span class="icon">⚠️</span> Disclaimer</h2>
-                <blockquote>
-                    <p><strong>This project is not affiliated with, endorsed by, or sponsored by Google LLC or the Gemini AI team.</strong> This is an independent, open-source desktop application that provides a wrapper interface for accessing Google's Gemini AI service through their official website.</p>
-                </blockquote>
-                <ul>
-                    <li><strong>Gemini AI</strong> is a trademark of Google LLC</li>
-                    <li>This application simply loads the official Gemini website (gemini.google.com) in a desktop wrapper</li>
-                    <li>All AI functionality is provided by Google's servers</li>
-                    <li>No data is collected or stored by this application</li>
-                    <li>Users must comply with Google's Terms of Service when using Gemini AI</li>
-                </ul>
-            </section>
+        <section id="features">
+            <h2 class="animate-on-scroll">✨ Why Settle for a Tab When You Can Have a Throne? ✨</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">GeminiDesk is more than a wrapper. It's a command center, loaded with features that will make you wonder how you ever lived without them.</p>
+            <div class="features-grid">
+                <!-- Feature Cards -->
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Screenshot to Chat
+                    </h3>
+                    <p>Instantly snip any part of your screen with a hotkey. The image is magically beamed into your chat, ready for Gemini's brilliant analysis. It's like having a conversation with your screen!</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+                        Universal File Drop
+                    </h3>
+                    <p>Drag and drop images, PDFs, text files—heck, almost any file—directly into the app. It's instantly ready for upload. The friction? Gone. The future? Now.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        Instant Model Switching
+                    </h3>
+                    <p>Why click through menus like a peasant? Use dedicated hotkeys to instantly fire up a new chat with either the lightning-fast <strong>Flash</strong> model or the powerhouse <strong>Pro</strong> model.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        Find That Chat... Instantly!
+                    </h3>
+                    <p>Lost a brilliant idea in the chat abyss? Hit the search hotkey to immediately focus the search bar and unearth your past conversations. Your brain will thank you.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                        Multi-Window Mania
+                    </h3>
+                    <p>Who said you can only have one conversation at a time? Open multiple windows and conquer multiple topics simultaneously. It’s organized chaos at its finest.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                        Always-On-Top Mode
+                    </h3>
+                    <p>Keep Gemini watching over your shoulder (in a non-creepy way) while you work. Perfect for coding, writing, or just feeling less alone in the universe.</p>
+                </div>
+                 <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.5A4.5 4.5 0 0 0 17.5 5c-.5 0-1 .5-1.5.5-1.5 0-2.75-1.06-4-1.06-3 0-6 8-6 12.5A4.5 4.5 0 0 0 6.5 19c.5 0 1-.5 1.5-.5Z"/></svg>
+                        Your Keys, Your Kingdom
+                    </h3>
+                    <p>Don't like our default hotkeys? No problem! Dive into the settings and remap every single shortcut to fit your unique, beautiful, and probably weird workflow.</p>
+                </div>
+                 <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h12Z"/><path d="m9 16 3-3 3 3"/><path d="M12 13V7"/></svg>
+                        Run on Startup
+                    </h3>
+                    <p>Have GeminiDesk greet you the moment your computer boots up. Because your AI assistant should be as ready to work as you are (or more so).</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                        The Little Things
+                    </h3>
+                    <p>Persistent Login, Automatic Mic Permissions, and Smart, Non-Intrusive Updates. We've ironed out all the wrinkles so it just works.</p>
+                </div>
+            </div>
+        </section>
 
-            <section class="reveal">
-                <h2><span class="icon">✨</span> Features</h2>
-                <ul>
-                    <li><strong>🖥️ Native Desktop Experience</strong> - Full-featured Electron app with native OS integration</li>
-                    <li><strong>🔄 Dual Window Modes</strong> - Switch between full window and drawer</li>
-                    <li><strong>⌨️ Global Hotkeys</strong> - Customizable keyboard shortcuts for instant access</li>
-                    <li><strong>🎨 System Tray Integration</strong> - Quick access from your system tray</li>
-                    <li><strong>🎤 Voice Mode</strong> - Hands-free voice interaction with automatic speech-to-text and text-to-speech</li>
-                </ul>
-            </section>
-
-            <section class="reveal">
-                <h2><span class="icon">📥</span> Installation</h2>
-                <h3>📦 Pre-built Releases (Recommended)</h3>
-                <p>Download the latest release for your platform:</p>
+        <section id="shortcuts">
+            <h2 class="animate-on-scroll">⌨️ The Secret Handshakes (Default Shortcuts)</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">Access the magic from anywhere in your OS. (Remember, you can change ALL of these in the settings!)</p>
+            <div class="table-container animate-on-scroll">
                 <table>
                     <thead>
                         <tr>
-                            <th>Platform</th>
-                            <th>Download</th>
-                            <th>Notes</th>
+                            <th>Shortcut</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>🪟 <strong>Windows</strong></td>
-                            <td><a href="https://github.com/dortanes/gemini-desktop/releases/latest">Download .exe</a></td>
-                            <td>NSIS installer with auto-updater</td>
-                        </tr>
-                        <tr>
-                            <td>🍎 <strong>macOS</strong></td>
-                            <td>🚧 Coming Soon</td>
-                            <td>Universal binary (Intel + Apple Silicon)</td>
-                        </tr>
-                        <tr>
-                            <td>🐧 <strong>Linux</strong></td>
-                            <td>🚧 Coming Soon</td>
-                            <td>AppImage, .deb, and .rpm packages</td>
-                        </tr>
+                        <tr><td><code>Alt</code> + <code>G</code></td><td>Toggle App Visibility (Show / Hide)</td></tr>
+                        <tr><td><code>Alt</code> + <code>N</code></td><td><strong>Open a New Window</strong></td></tr>
+                        <tr><td><code>Alt</code> + <code>S</code></td><td><strong>Search Chats Instantly</strong></td></tr>
+                        <tr><td><code>Control</code> + <code>Alt</code> + <code>S</code></td><td><strong>Capture Screenshot</strong> & Paste into Chat</td></tr>
+                        <tr><td><code>Alt</code> + <code>P</code></td><td>New Chat with <strong>Pro</strong> Model</td></tr>
+                        <tr><td><code>Alt</code> + <code>F</code></td><td>New Chat with <strong>Flash</strong> Model</td></tr>
+                        <tr><td><code>Alt</code> + <code>I</code></td><td>Show Instructions / Onboarding Screen</td></tr>
+                        <tr><td><code>Alt</code> + <code>Q</code></td><td>Quit Application (The "I'm Done" Button)</td></tr>
                     </tbody>
                 </table>
-                <blockquote><p><strong>Note:</strong> Currently, only Windows builds are available. macOS and Linux builds are coming soon! 🚀</p></blockquote>
-                
-                <h3>🔧 Installation Instructions</h3>
-                <h4>Windows</h4>
-                <ol>
-                    <li>Download the installer</li>
-                    <li>Run the installer</li>
-                    <li>Follow the setup wizard</li>
-                    <li>Launch from Start Menu or Desktop shortcut</li>
-                </ol>
-                
-                <h4>macOS &amp; Linux</h4>
-                <p>These platforms are currently under development. You can still run the app from source code (see <a href="#development">Development</a> section below) or wait for the official releases coming soon!</p>
-            </section>
+            </div>
+        </section>
 
-            <section class="reveal">
-                <h2><span class="icon">🚀</span> Quick Start</h2>
-                <ol>
-                    <li><strong>Launch the Application</strong>
-                        <ul><li>Use your desktop shortcut or application menu</li><li>Or use the system tray icon for quick access</li></ul>
-                    </li>
-                    <li><strong>Set Up Hotkeys</strong> (Optional)
-                        <ul><li>Open Settings from the tray menu</li><li>Configure global hotkeys for drawer and main window</li><li>Customize voice mode hotkey (default: <code>Ctrl+Shift+V</code>)</li><li>Save your preferences</li></ul>
-                    </li>
-                    <li><strong>Start Using Gemini AI</strong>
-                        <ul><li>The app loads Google's Gemini official website (gemini.google.com)</li><li>Use drawer for quick queries</li><li>Switch to full mode for extended conversations</li><li>You can also open it in full screen mode (click F11)</li></ul>
-                    </li>
-                    <li><strong>Voice Mode</strong> 🎤
-                        <ul><li>Press your voice mode hotkey (default: <code>Ctrl+Shift+V</code>) to activate hands-free mode</li><li>Speak your question - the app will automatically detect when you're done</li><li>Your speech will be converted to text and sent to Gemini</li><li>The response will be read aloud using text-to-speech</li><li>Perfect for hands-free interaction while working on other tasks</li></ul>
-                    </li>
-                </ol>
-            </section>
+        <section id="installation">
+            <h2 class="animate-on-scroll">💾 Installation</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">Getting this slab of awesome onto your machine is laughably simple.</p>
+            <ol style="list-style-position: inside; max-width: 65ch; margin: 0 auto;" class="animate-on-scroll">
+                <li style="margin-bottom: 1rem;">Brave the digital seas and navigate to the <a href="https://github.com/hillelkingqt/GeminiDesk/releases/latest" target="_blank"><strong>Latest Release</strong></a> page.</li>
+                <li style="margin-bottom: 1rem;">Snag the <code>GeminiApp-Setup-x.x.x.exe</code> file. It won't bite.</li>
+                <li style="margin-bottom: 1rem;">Run the installer. Follow the on-screen instructions. Click 'Next' like you mean it.</li>
+            </ol>
+            <p style="text-align: center; margin-top: 2rem;" class="animate-on-scroll">That's it! GeminiDesk is now a permanent resident on your desktop. Treat it well.</p>
+        </section>
+
+        <section id="developer">
+            <h2 class="animate-on-scroll">🛠️ For Developers: Building From the Ashes</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">Want to peek under the hood or forge your own version? We admire your courage.</p>
             
-            <section class="reveal">
-                <h2><span class="icon">🎤</span> Voice Mode</h2>
-                <p>The Voice Mode feature provides a completely hands-free way to interact with Gemini AI using speech-to-text and text-to-speech capabilities.</p>
-                <blockquote><p><strong>FYI:</strong> This feature uses Gemini's original built-in speech-to-text (STT) and text-to-speech (TTS) functionality - no additional services or APIs required!</p></blockquote>
-                <h3>How It Works</h3>
-                <ol>
-                    <li><strong>Activation:</strong> Press the voice mode hotkey (default: <code>Ctrl+Shift+V</code>)</li>
-                    <li><strong>Voice Recording:</strong> The app automatically starts recording your voice</li>
-                    <li><strong>Smart Detection:</strong> Automatically detects when you've finished speaking (2-second pause)</li>
-                    <li><strong>Auto-Send:</strong> Converts your speech to text and sends it to Gemini</li>
-                    <li><strong>Audio Response:</strong> Gemini's response is automatically read aloud using text-to-speech</li>
-                </ol>
-            </section>
-
-            <section class="reveal" id="development">
-                <h2><span class="icon">🛠️</span> Development</h2>
-                <h3>📋 Prerequisites</h3>
-                <ul>
-                    <li><strong>Node.js</strong> 20+ (<a href="https://nodejs.org/">Download</a>)</li>
-                    <li><strong>yarn</strong></li>
-                    <li><strong>Git</strong></li>
+            <div class="animate-on-scroll">
+                <h3>Prerequisites</h3>
+                <ul style="list-style-position: inside; margin-left: 1rem; margin-bottom: 2rem;">
+                    <li><a href="https://nodejs.org/" target="_blank">Node.js</a> (v16 or higher is a good life choice)</li>
+                    <li><a href="https://git-scm.com/" target="_blank">Git</a></li>
                 </ul>
-                <h3>🔧 Setup</h3>
-<pre><code class="language-bash">
-# Clone the repository
-git clone https://github.com/dortanes/gemini-desktop.git
-cd gemini-desktop
+            </div>
 
-# Install dependencies
-yarn install
+            <div class="animate-on-scroll">
+                <h3>Get Started</h3>
+                <p>1. <strong>Clone the legend:</strong></p>
+                <div class="code-block-wrapper">
+                    <pre><code class="language-sh">git clone https://github.com/hillelkingqt/GeminiDesk.git
+cd GeminiDesk</code></pre>
+                    <button class="copy-btn">Copy</button>
+                </div>
 
-# Start development server
-yarn start
-</code></pre>
-                <h3>🏗️ Building</h3>
-<pre><code class="language-bash">
-# Build for Windows specifically
-yarn build-win
+                <p>2. <strong>Install the ancient runes (dependencies):</strong></p>
+                <div class="code-block-wrapper">
+                    <pre><code class="language-sh">npm install</code></pre>
+                    <button class="copy-btn">Copy</button>
+                </div>
 
-# Build for development testing
-yarn dist
-</code></pre>
-                <blockquote><p><strong>Note:</strong> macOS and Linux build scripts are temporarily disabled but will be re-enabled soon. For now, focus is on Windows builds for better testing and stability.</p></blockquote>
-                <h3>🧪 Testing</h3>
-<pre><code class="language-bash">
-# Run in development mode
-yarn start
+                <p>3. <strong>Unleash the beast (run in dev mode):</strong></p>
+                <div class="code-block-wrapper">
+                    <pre><code class="language-sh">npm start</code></pre>
+                    <button class="copy-btn">Copy</button>
+                </div>
 
-# Build and test locally
-yarn dist
-</code></pre>
-            </section>
-            
-            <section class="reveal">
-                <h2><span class="icon">⚙️</span> Configuration</h2>
-                <h3>🎛️ Application Settings</h3>
-                <p>The app stores settings in your system's user data directory:</p>
-                <ul>
-                    <li><strong>Windows:</strong> <code>%APPDATA%/gemini-desktop/</code></li>
-                    <li><strong>macOS:</strong> <code>~/Library/Application Support/gemini-desktop/</code></li>
-                    <li><strong>Linux:</strong> <code>~/.config/gemini-desktop/</code></li>
-                </ul>
-            </section>
+                <p>4. <strong>Package it for the masses (build the installer):</strong></p>
+                <div class="code-block-wrapper">
+                    <pre><code class="language-sh">npm run build</code></pre>
+                    <button class="copy-btn">Copy</button>
+                </div>
+            </div>
+        </section>
 
-            <section class="reveal">
-                <h2><span class="icon">📄</span> License</h2>
-                <p>This project is licensed under the <strong>MIT License</strong> - see the LICENSE file for details.</p>
-            </section>
-        </main>
-        
-        <hr>
+        <section id="contribute">
+            <h2 class="animate-on-scroll">🤝 Let's Build a Dynasty</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">Contributions are the lifeblood of open source. If you have an idea that's so good it's scary, we want to see it.</p>
+            <ol style="list-style-position: inside; max-width: 65ch; margin: 0 auto;" class="animate-on-scroll">
+                <li style="margin-bottom: 1rem;">Fork the Project</li>
+                <li style="margin-bottom: 1rem;">Create your Feature Branch (<code>git checkout -b feature/MindBlowingFeature</code>)</li>
+                <li style="margin-bottom: 1rem;">Commit your Changes (<code>git commit -m 'Add some MindBlowingFeature'</code>)</li>
+                <li style="margin-bottom: 1rem;">Push to the Branch (<code>git push origin feature/MindBlowingFeature</code>)</li>
+                <li style="margin-bottom: 1rem;">Open a Pull Request and prepare for glory.</li>
+            </ol>
+        </section>
+    </main>
 
-        <footer class="center-text reveal">
-            <p>Made with ❤️ by <a href="https://github.com/dortanes">dortanes</a></p>
-            <p><strong>⭐ Star this repo if you find it useful! ⭐</strong></p>
-        </footer>
-    </div>
+    <footer>
+        <p>Distributed under the MIT License. <a href="https://github.com/hillelkingqt/GeminiDesk/blob/main/LICENSE" target="_blank">View License</a></p>
+    </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // --- Theme Toggler ---
-            const themeToggle = document.getElementById('theme-toggle');
-            const htmlEl = document.documentElement;
-            const currentTheme = localStorage.getItem('theme') || 'dark';
+    // --- Theme Toggle ---
+    const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+    const currentTheme = localStorage.getItem('theme');
 
-            if (currentTheme === 'light') {
-                htmlEl.classList.remove('dark-mode');
-                htmlEl.classList.add('light-mode');
-                themeToggle.checked = false; // In our CSS, unchecked is light
-            } else {
-                htmlEl.classList.add('dark-mode');
-                htmlEl.classList.remove('light-mode');
-                themeToggle.checked = true; // checked is dark
-            }
-            
-            // Re-adjusting logic for the visual toggle
-            // Unchecked = light, Checked = dark
-            if (currentTheme === 'light') {
-                themeToggle.checked = false;
-            } else {
-                themeToggle.checked = true;
-            }
+    if (currentTheme) {
+        document.documentElement.setAttribute('class', currentTheme);
+        if (currentTheme === 'light-mode') {
+            toggleSwitch.checked = true;
+        }
+    }
 
-            themeToggle.addEventListener('change', function() {
-                if (this.checked) {
-                    htmlEl.classList.add('dark-mode');
-                    htmlEl.classList.remove('light-mode');
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    htmlEl.classList.remove('dark-mode');
-                    htmlEl.classList.add('light-mode');
-                    localStorage.setItem('theme', 'light');
+    function switchTheme(e) {
+        if (e.target.checked) {
+            document.documentElement.setAttribute('class', 'light-mode');
+            localStorage.setItem('theme', 'light-mode');
+        } else {
+            document.documentElement.setAttribute('class', 'dark-mode');
+            localStorage.setItem('theme', 'dark-mode');
+        }
+    }
+
+    toggleSwitch.addEventListener('change', switchTheme, false);
+
+    // --- Scroll Animations ---
+    const scrollElements = document.querySelectorAll(".animate-on-scroll");
+
+    const elementInView = (el, dividend = 1) => {
+        const elementTop = el.getBoundingClientRect().top;
+        return (
+            elementTop <= (window.innerHeight || document.documentElement.clientHeight) / dividend
+        );
+    };
+
+    const displayScrollElement = (element) => {
+        element.classList.add("is-visible");
+    };
+
+    const hideScrollElement = (element) => {
+        element.classList.remove("is-visible");
+    };
+
+    const handleScrollAnimation = () => {
+        scrollElements.forEach((el) => {
+            if (elementInView(el, 1.25)) {
+                displayScrollElement(el);
+            } 
+            // Optional: to re-animate when scrolling up
+            // else {
+            //     hideScrollElement(el);
+            // }
+        })
+    }
+
+    window.addEventListener("scroll", () => {
+        handleScrollAnimation();
+    });
+    // Initial check
+    handleScrollAnimation();
+
+
+    // --- Copy to Clipboard ---
+    const copyButtons = document.querySelectorAll('.copy-btn');
+    copyButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const pre = button.previousElementSibling;
+            const code = pre.querySelector('code');
+            const text = code.innerText;
+
+            // Use the Clipboard API
+            navigator.clipboard.writeText(text).then(() => {
+                button.innerText = 'Copied!';
+                setTimeout(() => {
+                    button.innerText = 'Copy';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                // Fallback for older browsers
+                try {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    button.innerText = 'Copied!';
+                    setTimeout(() => {
+                        button.innerText = 'Copy';
+                    }, 2000);
+                } catch (e) {
+                    console.error('Fallback copy failed', e);
                 }
             });
-
-            // --- Scroll Reveal Animation ---
-            const revealElements = document.querySelectorAll('.reveal');
-
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                        observer.unobserve(entry.target); // Optional: stop observing once visible
-                    }
-                });
-            }, {
-                threshold: 0.1 // Trigger when 10% of the element is visible
-            });
-
-            revealElements.forEach(el => {
-                observer.observe(el);
-            });
         });
+    });
+
+    // --- Animated Background ---
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let particlesArray;
+
+    class Particle {
+        constructor(x, y, directionX, directionY, size, color) {
+            this.x = x;
+            this.y = y;
+            this.directionX = directionX;
+            this.directionY = directionY;
+            this.size = size;
+            this.color = color;
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+
+        update() {
+            if (this.x > canvas.width || this.x < 0) {
+                this.directionX = -this.directionX;
+            }
+            if (this.y > canvas.height || this.y < 0) {
+                this.directionY = -this.directionY;
+            }
+            this.x += this.directionX;
+            this.y += this.directionY;
+            this.draw();
+        }
+    }
+
+    function init() {
+        particlesArray = [];
+        let numberOfParticles = (canvas.height * canvas.width) / 9000;
+        for (let i = 0; i < numberOfParticles; i++) {
+            let size = (Math.random() * 2) + 1;
+            let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+            let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+            let directionX = (Math.random() * .4) - .2;
+            let directionY = (Math.random() * .4) - .2;
+            let color = 'rgba(138, 180, 248, 0.5)';
+
+            particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+        for (let i = 0; i < particlesArray.length; i++) {
+            particlesArray[i].update();
+        }
+    }
+
+    window.addEventListener('resize', () => {
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
+        init();
+    });
+
+    init();
+    animate();
     </script>
 </body>
 </html>
