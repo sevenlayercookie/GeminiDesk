@@ -258,8 +258,22 @@
             margin: 1.5rem 0;
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
+            gap: 0.75rem;
             justify-content: center;
+            align-items: center;
+        }
+
+        .badges img {
+            vertical-align: middle; /* Ensures proper alignment of image content */
+        }
+
+        .badges a, .badges > img {
+            display: inline-block;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .badges a:hover, .badges > img:hover {
+            transform: translateY(-4px) scale(1.03);
         }
 
         /* ------------------- */
