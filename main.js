@@ -5,9 +5,10 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const { clipboard, nativeImage } = require('electron');
+const https = require('https'); // לביצוע בקשת API ל-GitHub
 let confirmWin = null;
 let isQuitting = false;
-
+let updateWin = null;
 const autoLauncher = new AutoLaunch({
     name: 'GeminiApp',
     path: app.getPath('exe'),
@@ -832,9 +833,14 @@ const ses = session.defaultSession;
   });
 
   registerShortcuts();
-  if (settings.autoStart) setAutoLaunch(true);
+if (settings.autoStart) setAutoLaunch(true);
 autoUpdater.autoDownload = false;
-scheduleDailyUpdateCheck();
+autoUpdater.forceDevUpdateConfig = true; 
+
+if (app.isPackaged) {
+  scheduleDailyUpdateCheck();
+}
+
 // If the app was opened with a file, handle it now
     if (filePathToProcess) {
         const primaryWindow = BrowserWindow.getAllWindows()[0];
@@ -863,7 +869,7 @@ app.on('window-all-closed', () => {
 });
 
 ipcMain.on('check-for-updates', () => {
-  autoUpdater.checkForUpdates();
+  openUpdateWindowAndCheck();
 });
 
 // === Update process management with feedback to the settings window ===
@@ -875,31 +881,89 @@ const sendUpdateStatus = (status, data = {}) => {
     }
   });
 };
+function openUpdateWindowAndCheck() {
+    if (updateWin) {
+        updateWin.focus();
+        return;
+    }
 
+    const parentWindow = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+    updateWin = new BrowserWindow({
+        width: 420, height: 500, frame: false, resizable: false, alwaysOnTop: true,
+        show: false, parent: parentWindow, modal: true,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+        }
+    });
+
+    updateWin.loadFile('update-available.html');
+
+    updateWin.once('ready-to-show', () => {
+        updateWin.show();
+        // שלב 1: שלח לחלון הודעה שאנחנו מתחילים לבדוק
+        updateWin.webContents.send('update-info', { status: 'checking' });
+        // שלב 2: רק עכשיו, התחל את תהליך הבדיקה ברקע
+        autoUpdater.checkForUpdates();
+    });
+
+    updateWin.on('closed', () => {
+        updateWin = null;
+    });
+}
 autoUpdater.on('checking-for-update', () => {
   sendUpdateStatus('checking');
 });
 
-autoUpdater.on('update-not-available', (info) => {
-  sendUpdateStatus('up-to-date');
-});
-
-autoUpdater.on('update-available', (info) => {
-  sendUpdateStatus('available');
-  dialog.showMessageBox({
-    type: 'info',
-    title: 'Update Available',
-    message: `A new version (${info.version}) is available. Would you like to open the download page?`,
-    buttons: ['Yes, open page', 'Later']
-  }).then((buttonIndex) => {
-    if (buttonIndex.response === 0) {
-      // This will open the latest release page on GitHub in the user's default browser.
-      const repoUrl = `https://github.com/hillelkingqt/GeminiDesk/releases/latest`;
-      shell.openExternal(repoUrl);
+autoUpdater.on('update-available', async (info) => {
+    if (!updateWin) {
+        // אם החלון לא נפתח ידנית, פתח אותו עכשיו (למקרה של בדיקה אוטומטית)
+        openUpdateWindowAndCheck();
+        return; // הפונקציה תקרא לעצמה שוב אחרי שהחלון יהיה מוכן
     }
-  });
+
+    try {
+        const { marked } = await import('marked');
+        const options = { hostname: 'api.github.com', path: '/repos/hillelkingqt/GeminiDesk/releases/latest', method: 'GET', headers: { 'User-Agent': 'GeminiDesk-App' }};
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                let releaseNotesHTML = '<p>Could not load release notes.</p>';
+                try {
+                    const releaseInfo = JSON.parse(data);
+                    if (releaseInfo.body) { releaseNotesHTML = marked.parse(releaseInfo.body); }
+                } catch (e) { console.error('Failed to parse release notes JSON:', e); }
+
+                if (updateWin) {
+                    updateWin.webContents.send('update-info', {
+                        status: 'update-available',
+                        version: info.version,
+                        releaseNotesHTML: releaseNotesHTML
+                    });
+                }
+            });
+        });
+        req.on('error', (e) => { if (updateWin) { updateWin.webContents.send('update-info', { status: 'error', message: e.message }); } });
+        req.end();
+    } catch (importError) { if (updateWin) { updateWin.webContents.send('update-info', { status: 'error', message: 'Failed to load modules.' }); } }
 });
 
+// החלף את המאזין הקיים של 'update-not-available' בזה:
+autoUpdater.on('update-not-available', (info) => {
+    if (updateWin) {
+        updateWin.webContents.send('update-info', { status: 'up-to-date' });
+    }
+    sendUpdateStatus('up-to-date'); // שלח גם להגדרות, ליתר ביטחון
+});
+
+// החלף את המאזין הקיים של 'error' בזה:
+autoUpdater.on('error', (err) => {
+    if (updateWin) {
+        updateWin.webContents.send('update-info', { status: 'error', message: err.message });
+    }
+    sendUpdateStatus('error', { message: err.message });
+});
 autoUpdater.on('download-progress', (progressObj) => {
   sendUpdateStatus('downloading', { percent: Math.round(progressObj.percent) });
 });
@@ -920,13 +984,25 @@ autoUpdater.on('update-downloaded', (info) => {
   });
 });
 
-autoUpdater.on('error', (err) => {
-  sendUpdateStatus('error', { message: err.message });
-});
+
 
 // ================================================================= //
 // IPC Event Handlers
 // ================================================================= //
+ipcMain.on('open-download-page', () => {
+  const repoUrl = `https://github.com/hillelkingqt/GeminiDesk/releases/latest`;
+  shell.openExternal(repoUrl);
+  // סגור את חלון העדכון לאחר פתיחת הדפדפן
+  if (updateWin) {
+    updateWin.close();
+  }
+});
+
+ipcMain.on('close-update-window', () => {
+  if (updateWin) {
+    updateWin.close();
+  }
+});
 ipcMain.on('open-new-window', () => {
   createWindow();
 });
@@ -1095,15 +1171,6 @@ ipcMain.on('open-settings-window', (event) => { // Added the event word
 
   settingsWin.on('closed', () => {
     settingsWin = null;
-  });
-});
-// Auto-update events
-autoUpdater.on('update-available', () => {
-  dialog.showMessageBox({ 
-    type: 'info', 
-    title: 'Update Available', 
-    message: 'A new version is available and will be downloaded.', 
-    buttons: ['OK'] 
   });
 });
 

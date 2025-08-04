@@ -15,14 +15,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdates: () => ipcRenderer.send('check-for-updates'),
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, ...args) => callback(...args)),
   onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', (event, ...args) => callback(...args)),
-  notifyCanvasState: (isCanvasVisible) => ipcRenderer.send('canvas-state-changed', isCanvasVisible)
+  notifyCanvasState: (isCanvasVisible) => ipcRenderer.send('canvas-state-changed', isCanvasVisible),
+  openDownloadPage: () => ipcRenderer.send('open-download-page'),
+  closeUpdateWindow: () => ipcRenderer.send('close-update-window')
 });
 
 // A. Added code to read the chat title
 contextBridge.exposeInMainWorld('chatAPI', {
   onTitleUpdate: (callback) => ipcRenderer.on('update-title', (event, ...args) => callback(...args)),
 });
-
+contextBridge.exposeInMainWorld('updateAPI', {
+    onUpdateInfo: (callback) => ipcRenderer.on('update-info', (_event, value) => callback(value)),
+});
 let lastTitle = '';
 setInterval(() => {
     // Checks the title from the DOM of the Gemini page

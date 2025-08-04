@@ -1,180 +1,151 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/icon.ico" alt="GeminiDesk Logo" width="128">
+  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/icon.ico" alt="GeminiDesk Logo" width="150">
 </p>
 
-<h1 align="center">GeminiDesk</h1>
+<h1 align="center">🚀 GeminiDesk 🚀</h1>
 
 <p align="center">
-  <strong>A feature-packed, sleek, and powerful desktop client for Google's Gemini.</strong>
+  <strong>Tired of Gemini being just another browser tab? So were we.</strong>
   <br />
-  Packed with power-user features designed for maximum productivity and seamless workflow integration.
+  We've liberated Google's AI from its browser cage and turned it into a sleek, powerful, and slightly mischievous desktop powerhouse.
 </p>
 
 <p align="center">
     <a href="https://github.com/hillelkingqt/GeminiDesk/releases/latest">
-    <img src="https://img.shields.io/github/v/release/hillelkingqt/GeminiDesk?style=for-the-badge&logo=github&label=Latest%20Release" alt="Latest Release">
+    <img src="https://img.shields.io/github/v/release/hillelkingqt/GeminiDesk?style=for-the-badge&logo=github&label=Latest%20Release&color=8ab4f8" alt="Latest Release">
   </a>
   <a href="https://github.com/hillelkingqt/GeminiDesk/releases">
-    <img src="https://img.shields.io/github/downloads/hillelkingqt/GeminiDesk/total?style=for-the-badge&logo=github" alt="Total Downloads">
+    <img src="https://img.shields.io/github/downloads/hillelkingqt/GeminiDesk/total?style=for-the-badge&logo=github&color=c58af9" alt="Total Downloads">
   </a>
     <a href="https://github.com/hillelkingqt/GeminiDesk/issues">
-    <img src="https://img.shields.io/github/issues/hillelkingqt/GeminiDesk?style=for-the-badge&logo=github" alt="Issues">
+    <img src="https://img.shields.io/github/issues/hillelkingqt/GeminiDesk?style=for-the-badge&logo=github&color=81c995" alt="Issues">
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows" alt="Platform: Windows">
 </p>
 
 <p align="center">
-  <em>GeminiDesk elevates Google's AI from a browser tab into a native desktop powerhouse. No more browser clutter—just pure, focused productivity.</em>
+  <em>GeminiDesk transforms your AI interaction from a clumsy browser dance into a native desktop symphony. No more clutter. No more distractions. Just pure, unadulterated productivity with a sprinkle of magic.</em>
 </p>
 
 <p align="center">
   <img src="https://i.imgur.com/your-gif-url.gif" alt="GeminiDesk Demo">
 </p>
 
-## 📸 Screenshots
+---
 
-<p align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot1.png" alt="Main Chat Interface" width="260">
-        <br>
-      </td>
-      <td align="center">
-        <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot2.png" alt="Settings Window" width="260">
-        <br>
-      </td>
-      <td align="center">
-        <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot3.png" alt="Onboarding Screen" width="260">
-        <br>
-      </td>
-            <td align="center">
-        <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot4.png" alt="Onboarding Screen" width="260">
-        <br>
-      </td>
-            <td align="center">
-        <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot5.png" alt="Onboarding Screen" width="260">
-        <br>
-      </td>
-            <td align="center">
-        <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot6.png" alt="Onboarding Screen" width="260">
-        <br>
-      </td>
-            <td align="center">
-        <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot7.png" alt="Onboarding Screen" width="260">
-        <br>
-      </td>
-            <td align="center">
-        <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot8.png" alt="Onboarding Screen" width="260">
-        <br>
-      </td>
-    </tr>
-  </table>
-</p>
+## ✨ Why Settle for a Tab When You Can Have a Throne? ✨
+
+GeminiDesk is more than a wrapper. It's a command center, loaded with features that will make you wonder how you ever lived without them.
+
+* **📸 Screenshot to Chat: See It, Snip It, Solve It!**
+    Instantly snip any part of your screen with a hotkey. The image is magically beamed into your chat, ready for Gemini's brilliant analysis. It's like having a conversation with your screen!
+
+* **📁 Universal File Drop: Your Files' New Best Friend**
+    Drag and drop images, PDFs, text files—heck, almost any file—directly into the app. It's instantly ready for upload. The friction? Gone. The future? Now.
+
+* **⚡️ Instant Model Switching: Flash or Pro? Decide in a Flash.**
+    Why click through menus like a peasant? Use dedicated hotkeys to instantly fire up a new chat with either the lightning-fast **Flash** model or the powerhouse **Pro** model. Your workflow just got a nitrous boost.
+
+* **🔎 Find That Chat... Instantly!**
+    Lost a brilliant idea in the chat abyss? Hit the search hotkey to immediately focus the search bar and unearth your past conversations. Your brain will thank you.
+
+* **✨ Multi-Window Mania**
+    Who said you can only have one conversation at a time? Open multiple windows and conquer multiple topics simultaneously. It’s organized chaos at its finest.
+
+* **📌 Always-On-Top Mode: Your Unwavering AI Companion**
+    Keep Gemini watching over your shoulder (in a non-creepy way) while you work. Perfect for coding, writing, or just feeling less alone in the universe.
+
+* **⌨️ Your Keys, Your Kingdom: Total Shortcut Customization**
+    Don't like our default hotkeys? No problem! Dive into the settings and remap every single shortcut to fit your unique, beautiful, and probably weird workflow.
+
+* **🚀 Run on Startup**
+    Have GeminiDesk greet you the moment your computer boots up. Because your AI assistant should be as ready to work as you are (or more so).
+
+* **🖥️ Fullscreen & Custom Header**
+    Go big with a dedicated fullscreen mode. The sleek, draggable header bar even shows your current chat's title, so you always know what you're working on.
+
+* **🧠 The Little Things That Matter**
+    We've ironed out all the wrinkles. **Persistent Login** (sign in once!), **Automatic Mic Permissions** (no more nagging pop-ups!), and **Smart, Non-Intrusive Updates**. It just works.
 
 ---
 
-## ✨ Features
+## ⌨️ The Secret Handshakes (Default Shortcuts)
 
-GeminiDesk is more than just a web wrapper. It's a carefully crafted desktop experience loaded with features to supercharge your workflow.
+Access the magic from anywhere in your OS. (Remember, you can change ALL of these in the settings!)
 
-* **📌 Always-On-Top Mode**: Keep Gemini visible over all other windows. Perfect for referencing, coding, or multitasking without losing context.
-
-* **📸 Screenshot to Chat**: Instantly capture any part of your screen. The image is copied to your clipboard and automatically pasted into the chat, ready to be analyzed by Gemini.
-
-* **⚡ On-the-Fly Model Switching**: Use global hotkeys to start a new chat with the exact Gemini model you need, instantly. No more manual switching.
-
-* **⚙️ Full Customization**: Open the settings panel (`⚙️`) to tailor GeminiDesk to your needs.
-    * Toggle "Run on Startup" and "Always on Top".
-    * Customize every global keyboard shortcut to match your workflow.
-    * Manually check for updates or reset the app to its default settings.
-
-* **🧠 Dynamic Header**: The custom draggable header bar displays the title of your current conversation, helping you keep track of different chats.
-
-* **🚀 Smart Updates**: The app checks for new versions once a day in the background. If an update is found, it notifies you with a simple dialog—no automatic downloads. You get a direct link to the latest GitHub release.
-
-* **🎤 Persistent Microphone Permissions**: Grant microphone access once, and the app remembers your choice for seamless voice-to-text input.
-
-* **🔒 Persistent Login**: Sign in to your Google account once, and GeminiDesk keeps you logged in across sessions.
-
-* **💼 Lightweight & Focused**: Enjoy a dedicated environment for Gemini without the memory and CPU overhead of a full web browser.
-
-### ⌨️ Keyboard Shortcuts
-
-Access GeminiDesk's core features from anywhere in your OS with these default global hotkeys (fully customizable in Settings):
-
-| Shortcut                | Action                                  |
-| ----------------------- | --------------------------------------- |
-| `Alt` + `G`             | Toggle App Visibility (Show / Hide)     |
-| `Alt` + `Q`             | Quit Application                        |
-| `Ctrl` + `Alt` + `S`    | **Capture Screenshot** to Clipboard & Chat |
-| `Alt`  + `F` | **New Chat** with **Flash** Model       |
-| `Alt` + `P` | **New Chat** with **Pro** Model         |
-| `Alt` + `I`             | Show Instructions/Onboarding Screen     |
+| Shortcut                      | Action                                      |
+| ----------------------------- | ------------------------------------------- |
+| `Alt` + `G`                   | Toggle App Visibility (Show / Hide)         |
+| `Alt` + `N`                   | **Open a New Window** |
+| `Alt` + `S`                   | **Search Chats Instantly** |
+| `Control` + `Alt` + `S`       | **Capture Screenshot** & Paste into Chat    |
+| `Alt` + `P`                   | New Chat with **Pro** Model                 |
+| `Alt` + `F`                   | New Chat with **Flash** Model               |
+| `Alt` + `I`                   | Show Instructions / Onboarding Screen       |
+| `Alt` + `Q`                   | Quit Application (The "I'm Done" Button)    |
 
 ---
 
 ## 💾 Installation
 
-Getting started with GeminiDesk is simple.
+Getting this slab of awesome onto your machine is laughably simple.
 
-1.  Navigate to the [**Latest Release**](https://github.com/hillelkingqt/GeminiDesk/releases/latest) page.
-2.  Download the `GeminiApp-Setup-x.x.x.exe` file.
-3.  Run the installer and follow the on-screen instructions. You can choose to run the app at startup during installation.
+1.  Brave the digital seas and navigate to the [**Latest Release**](https://github.com/hillelkingqt/GeminiDesk/releases/latest) page.
+2.  Snag the `GeminiApp-Setup-x.x.x.exe` file. It won't bite.
+3.  Run the installer. Follow the on-screen instructions. Click 'Next' like you mean it.
 
-That's it! GeminiDesk is now installed and ready to use.
+That's it! GeminiDesk is now a permanent resident on your desktop. Treat it well.
 
 ---
 
-## 🛠️ For Developers: Building From Source
+## 🛠️ For Developers: Building From the Ashes
 
-Interested in contributing or running the development version?
+Want to peek under the hood or forge your own version? We admire your courage.
 
 ### Prerequisites
-* [Node.js](https://nodejs.org/) (v16 or higher recommended)
+* [Node.js](https://nodejs.org/) (v16 or higher is a good life choice)
 * [Git](https://git-scm.com/)
 
 ### Get Started
 
-1.  **Clone the repository:**
+1.  **Clone the legend:**
     ```sh
     git clone https://github.com/hillelkingqt/GeminiDesk.git
     cd GeminiDesk
     ```
 
-2.  **Install project dependencies:**
+2.  **Install the ancient runes (dependencies):**
     ```sh
     npm install
     ```
 
-3.  **Run the app in development mode:**
-    This will launch the application window.
+3.  **Unleash the beast (run in dev mode):**
     ```sh
     npm start
     ```
 
-4.  **Build the distributable installer:**
-    The final installer will be located in the `dist/` directory.
+4.  **Package it for the masses (build the installer):**
+    The final artifact will be forged in the `dist/` directory.
     ```sh
     npm run build
     ```
 
 ---
 
-## 🤝 Contributing
+## 🤝 Let's Build a Dynasty
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Contributions are the lifeblood of open source. If you have an idea that's so good it's scary, we want to see it.
 
 1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+2.  Create your Feature Branch (`git checkout -b feature/MindBlowingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some MindBlowingFeature'`)
+4.  Push to the Branch (`git push origin feature/MindBlowingFeature`)
+5.  Open a Pull Request and prepare for glory.
 
 ---
 
 ## 📜 License
 
-Distributed under the MIT License. See the `LICENSE` file for more information.
+This project is distributed under the MIT License, which basically means you can do whatever you want with it as long as you give us a little nod. See the full legal mumbo-jumbo below.
+
+[**LICENSE**](LICENSE)

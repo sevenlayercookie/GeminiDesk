@@ -1,6 +1,6 @@
 {
   "name": "gemini-app",
-  "version": "4.4.0",
+  "version": "4.3.0",
   "description": "Gemini Desktop Wrapper",
   "author": "Hillel BH",
   "main": "main.js",
@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "auto-launch": "^5.0.6",
-    "electron-updater": "^6.6.2"
+    "electron-updater": "^6.6.2",
+    "marked": "^16.1.2"
   },
   "build": {
     "appId": "com.hillel.geminiapp",
@@ -30,6 +31,7 @@
       "drag.html",
       "settings.html",
       "confirm-reset.html",
+      "update-available.html",
       "icon1.png",
       "node_modules/auto-launch",
       "package.json"

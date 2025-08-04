@@ -104,7 +104,6 @@
             <div class="setting-item">
                 <div class="setting-label"><strong>Application Updates</strong><span>Check for the latest version.</span></div>
                 <div style="display: flex; align-items: center;">
-                    <span id="update-status-text"></span>
                     <button id="check-for-updates-button" class="action-button">Check for Updates</button>
                 </div>
             </div>
@@ -199,38 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- New update logic ---
     updateButton.addEventListener('click', () => {
         electronAPI.checkForUpdates();
-    });
-
-    electronAPI.onUpdateStatus((data) => {
-        updateButton.disabled = true; // Lock the button during operation
-        updateStatusText.style.color = 'var(--text-secondary)';
-
-        switch (data.status) {
-            case 'checking':
-                updateStatusText.textContent = 'Checking...';
-                break;
-            case 'available':
-                updateStatusText.textContent = 'Update found!';
-                break;
-            case 'downloading':
-                updateStatusText.textContent = `Downloading... ${data.percent}%`;
-                break;
-            case 'up-to-date':
-                updateStatusText.textContent = 'App is up to date';
-                updateStatusText.style.color = 'var(--success-color)';
-                updateButton.disabled = false;
-                break;
-            case 'downloaded':
-                updateStatusText.textContent = 'Ready to install';
-                updateStatusText.style.color = 'var(--success-color)';
-                updateButton.disabled = false;
-                break;
-            case 'error':
-                updateStatusText.textContent = 'Update error';
-                updateStatusText.style.color = 'var(--danger-color)';
-                updateButton.disabled = false;
-                break;
-        }
     });
 
 
