@@ -1,10 +1,696 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="dark-mode">
 <head>
-    <title>GeminiDesk</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini AI Desktop</title>
+    <style>
+        /* --- Import Fonts --- */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        /* --- CSS Variables for Theming --- */
+        :root {
+            --ease-1: cubic-bezier(0.25, 1, 0.5, 1);
+            --ease-2: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        html.dark-mode {
+            --bg-primary: #0a0a1a;
+            --bg-secondary: #1a1a3a;
+            --bg-tertiary: #2a2a5a;
+            --text-primary: #e0e0ff;
+            --text-secondary: #a0a0cc;
+            --accent-primary: #8a2be2; /* BlueViolet */
+            --accent-secondary: #00e5ff; /* Cyan */
+            --glow-color: rgba(138, 43, 226, 0.6);
+            --border-color: rgba(138, 43, 226, 0.2);
+            --code-bg: #1e1e4e;
+            --code-text: #d0d0ff;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+        }
+
+        html.light-mode {
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #1c1e21;
+            --text-secondary: #555e68;
+            --accent-primary: #6a0dad; /* A darker purple for contrast */
+            --accent-secondary: #007bff;
+            --glow-color: rgba(106, 13, 173, 0.4);
+            --border-color: rgba(0, 0, 0, 0.1);
+            --code-bg: #e8e8e8;
+            --code-text: #222;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* --- Base & Reset --- */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.5s var(--ease-2), color 0.5s var(--ease-2);
+            overflow-x: hidden;
+            line-height: 1.7;
+        }
+
+        /* --- Animated Background --- */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at top left, var(--accent-primary), transparent 40%),
+                        radial-gradient(circle at bottom right, var(--accent-secondary), transparent 40%);
+            animation: background-pan 20s infinite alternate;
+            opacity: 0.2;
+        }
+
+        @keyframes background-pan {
+            from { background-position: 0% 0%; }
+            to { background-position: 100% 100%; }
+        }
+
+        /* --- Main Container & Layout --- */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* --- Scroll-Reveal Animation --- */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s var(--ease-1), transform 0.8s var(--ease-1);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* --- Typography & Content --- */
+        h1, h2, h3 {
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+            text-shadow: 0 0 10px var(--glow-color);
+            animation: text-flicker 5s infinite alternate;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            text-align: center;
+            background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient-flow 10s linear infinite, text-flicker 5s infinite alternate;
+            background-size: 200% 200%;
+        }
+
+        h1 .icon {
+            display: inline-block;
+            animation: icon-float 3s ease-in-out infinite;
+            -webkit-text-fill-color: initial; /* Restore color for emoji */
+            margin-right: 0.5rem;
+        }
+
+        @keyframes icon-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes text-flicker {
+            0%, 19.9%, 22%, 62.9%, 64%, 64.9%, 70%, 100% {
+                opacity: 0.99;
+                text-shadow: 0 0 10px var(--glow-color), 0 0 20px var(--glow-color), 0 0 30px var(--accent-primary), 0 0 40px var(--accent-primary), 0 0 50px var(--accent-primary);
+            }
+            20%, 21.9%, 63%, 63.9%, 65%, 69.9% {
+                opacity: 0.4;
+                text-shadow: none;
+            }
+        }
+        
+        @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        h2 {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            margin-top: 3rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+            position: relative;
+        }
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -2px;
+            width: 80px;
+            height: 2px;
+            background: var(--accent-primary);
+            box-shadow: 0 0 10px var(--glow-color);
+            animation: h2-underline-anim 5s infinite alternate;
+        }
+
+        @keyframes h2-underline-anim {
+            from { width: 80px; }
+            to { width: 150px; }
+        }
+
+        p, li {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        a {
+            color: var(--accent-secondary);
+            text-decoration: none;
+            position: relative;
+            transition: color 0.3s var(--ease-2);
+        }
+
+        a::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            transform: scaleX(0);
+            height: 1px;
+            bottom: -2px;
+            left: 0;
+            background-color: var(--accent-secondary);
+            transform-origin: bottom right;
+            transition: transform 0.3s var(--ease-2);
+        }
+
+        a:hover {
+            color: var(--text-primary);
+            text-shadow: 0 0 8px var(--accent-secondary);
+        }
+        
+        a:hover::after {
+            transform: scaleX(1);
+            transform-origin: bottom left;
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border-color), transparent);
+            margin: 4rem 0;
+        }
+
+        blockquote {
+            background-color: var(--bg-secondary);
+            border-left: 4px solid var(--accent-primary);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            transition: background-color 0.5s var(--ease-2), border-color 0.5s var(--ease-2);
+        }
+
+        blockquote p {
+            margin-bottom: 0;
+            font-style: italic;
+        }
+
+        /* --- Specific Components --- */
+        .center-text { text-align: center; }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .badges img {
+            transition: transform 0.3s var(--ease-1), box-shadow 0.3s var(--ease-1);
+            border-radius: 4px;
+        }
+
+        .badges img:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 8px 25px var(--glow-color);
+        }
+
+        /* --- Table Styling --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            transition: background-color 0.5s var(--ease-2);
+        }
+
+        th, td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            transition: border-color 0.5s var(--ease-2);
+        }
+
+        thead th {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-weight: 600;
+            transition: background-color 0.5s var(--ease-2);
+        }
+
+        tbody tr {
+            transition: background-color 0.3s var(--ease-2);
+        }
+        
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background-color: var(--bg-tertiary);
+        }
+
+        /* --- Code Block Styling --- */
+        pre {
+            background-color: var(--code-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px var(--shadow-color);
+            position: relative;
+        }
+
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+        }
+        
+        pre code {
+            padding: 0;
+            background: none;
+        }
+
+        /* --- Theme Toggler Switch --- */
+        .theme-switch-wrapper {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .theme-switch {
+            display: inline-block;
+            height: 34px;
+            position: relative;
+            width: 60px;
+        }
+
+        .theme-switch input {
+            display: none;
+        }
+
+        .slider {
+            background-color: var(--bg-tertiary);
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+            border-radius: 34px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider:before {
+            background-color: #fff;
+            bottom: 4px;
+            content: "";
+            height: 26px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 26px;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        /* Sun/Moon Icons */
+        .slider::after {
+            content: '🌙'; /* Moon */
+            font-size: 16px;
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: opacity 0.4s;
+            opacity: 1;
+        }
+        
+        html.light-mode .slider::after {
+            opacity: 0;
+        }
+
+        .slider::before {
+             content: '☀️'; /* Sun */
+            font-size: 16px;
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: opacity 0.4s;
+            opacity: 0;
+            color: #f39c12;
+            height: auto;
+            width: auto;
+            background: transparent;
+        }
+
+        html.light-mode .slider::before {
+            opacity: 1;
+        }
+        
+        html.light-mode .slider:before {
+             transform: translateX(26px) translateY(-50%);
+        }
+
+        /* Re-style slider handle for light mode */
+        html.light-mode .slider:before {
+            background-color: transparent;
+        }
+
+
+        /* Footer */
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 1rem;
+        }
+        footer strong {
+            font-size: 1.2rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { text-shadow: 0 0 4px var(--glow-color); }
+            50% { text-shadow: 0 0 16px var(--glow-color); }
+            100% { text-shadow: 0 0 4px var(--glow-color); }
+        }
+
+    </style>
 </head>
 <body>
-    <h1>Welcome to GeminiDesk!</h1>
-    <p>This is my custom HTML page.</p>
+
+    <div class="theme-switch-wrapper">
+        <label class="theme-switch" for="theme-toggle">
+            <input type="checkbox" id="theme-toggle">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <div class="container">
+        <header class="center-text reveal">
+            <h1><span class="icon">🤖</span> Gemini AI Desktop</h1>
+            <p><strong>Desktop application for Google's Gemini AI</strong></p>
+            <div class="badges">
+                <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+                <a href="https://github.com/dortanes/gemini-desktop/releases"><img src="https://img.shields.io/github/release/dortanes/gemini-desktop.svg" alt="GitHub release"></a>
+                <a href="https://github.com/dortanes/gemini-desktop/releases"><img src="https://img.shields.io/github/downloads/dortanes/gemini-desktop/total.svg" alt="Downloads"></a>
+            </div>
+            <hr>
+            <p><em>Transform your Gemini AI experience with a desktop application that brings Google's powerful AI assistant directly to your desktop with enhanced features and seamless integration.</em></p>
+        </header>
+
+        <main>
+            <section class="reveal">
+                <h2><span class="icon">⚠️</span> Disclaimer</h2>
+                <blockquote>
+                    <p><strong>This project is not affiliated with, endorsed by, or sponsored by Google LLC or the Gemini AI team.</strong> This is an independent, open-source desktop application that provides a wrapper interface for accessing Google's Gemini AI service through their official website.</p>
+                </blockquote>
+                <ul>
+                    <li><strong>Gemini AI</strong> is a trademark of Google LLC</li>
+                    <li>This application simply loads the official Gemini website (gemini.google.com) in a desktop wrapper</li>
+                    <li>All AI functionality is provided by Google's servers</li>
+                    <li>No data is collected or stored by this application</li>
+                    <li>Users must comply with Google's Terms of Service when using Gemini AI</li>
+                </ul>
+            </section>
+
+            <section class="reveal">
+                <h2><span class="icon">✨</span> Features</h2>
+                <ul>
+                    <li><strong>🖥️ Native Desktop Experience</strong> - Full-featured Electron app with native OS integration</li>
+                    <li><strong>🔄 Dual Window Modes</strong> - Switch between full window and drawer</li>
+                    <li><strong>⌨️ Global Hotkeys</strong> - Customizable keyboard shortcuts for instant access</li>
+                    <li><strong>🎨 System Tray Integration</strong> - Quick access from your system tray</li>
+                    <li><strong>🎤 Voice Mode</strong> - Hands-free voice interaction with automatic speech-to-text and text-to-speech</li>
+                </ul>
+            </section>
+
+            <section class="reveal">
+                <h2><span class="icon">📥</span> Installation</h2>
+                <h3>📦 Pre-built Releases (Recommended)</h3>
+                <p>Download the latest release for your platform:</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Platform</th>
+                            <th>Download</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🪟 <strong>Windows</strong></td>
+                            <td><a href="https://github.com/dortanes/gemini-desktop/releases/latest">Download .exe</a></td>
+                            <td>NSIS installer with auto-updater</td>
+                        </tr>
+                        <tr>
+                            <td>🍎 <strong>macOS</strong></td>
+                            <td>🚧 Coming Soon</td>
+                            <td>Universal binary (Intel + Apple Silicon)</td>
+                        </tr>
+                        <tr>
+                            <td>🐧 <strong>Linux</strong></td>
+                            <td>🚧 Coming Soon</td>
+                            <td>AppImage, .deb, and .rpm packages</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <blockquote><p><strong>Note:</strong> Currently, only Windows builds are available. macOS and Linux builds are coming soon! 🚀</p></blockquote>
+                
+                <h3>🔧 Installation Instructions</h3>
+                <h4>Windows</h4>
+                <ol>
+                    <li>Download the installer</li>
+                    <li>Run the installer</li>
+                    <li>Follow the setup wizard</li>
+                    <li>Launch from Start Menu or Desktop shortcut</li>
+                </ol>
+                
+                <h4>macOS &amp; Linux</h4>
+                <p>These platforms are currently under development. You can still run the app from source code (see <a href="#development">Development</a> section below) or wait for the official releases coming soon!</p>
+            </section>
+
+            <section class="reveal">
+                <h2><span class="icon">🚀</span> Quick Start</h2>
+                <ol>
+                    <li><strong>Launch the Application</strong>
+                        <ul><li>Use your desktop shortcut or application menu</li><li>Or use the system tray icon for quick access</li></ul>
+                    </li>
+                    <li><strong>Set Up Hotkeys</strong> (Optional)
+                        <ul><li>Open Settings from the tray menu</li><li>Configure global hotkeys for drawer and main window</li><li>Customize voice mode hotkey (default: <code>Ctrl+Shift+V</code>)</li><li>Save your preferences</li></ul>
+                    </li>
+                    <li><strong>Start Using Gemini AI</strong>
+                        <ul><li>The app loads Google's Gemini official website (gemini.google.com)</li><li>Use drawer for quick queries</li><li>Switch to full mode for extended conversations</li><li>You can also open it in full screen mode (click F11)</li></ul>
+                    </li>
+                    <li><strong>Voice Mode</strong> 🎤
+                        <ul><li>Press your voice mode hotkey (default: <code>Ctrl+Shift+V</code>) to activate hands-free mode</li><li>Speak your question - the app will automatically detect when you're done</li><li>Your speech will be converted to text and sent to Gemini</li><li>The response will be read aloud using text-to-speech</li><li>Perfect for hands-free interaction while working on other tasks</li></ul>
+                    </li>
+                </ol>
+            </section>
+            
+            <section class="reveal">
+                <h2><span class="icon">🎤</span> Voice Mode</h2>
+                <p>The Voice Mode feature provides a completely hands-free way to interact with Gemini AI using speech-to-text and text-to-speech capabilities.</p>
+                <blockquote><p><strong>FYI:</strong> This feature uses Gemini's original built-in speech-to-text (STT) and text-to-speech (TTS) functionality - no additional services or APIs required!</p></blockquote>
+                <h3>How It Works</h3>
+                <ol>
+                    <li><strong>Activation:</strong> Press the voice mode hotkey (default: <code>Ctrl+Shift+V</code>)</li>
+                    <li><strong>Voice Recording:</strong> The app automatically starts recording your voice</li>
+                    <li><strong>Smart Detection:</strong> Automatically detects when you've finished speaking (2-second pause)</li>
+                    <li><strong>Auto-Send:</strong> Converts your speech to text and sends it to Gemini</li>
+                    <li><strong>Audio Response:</strong> Gemini's response is automatically read aloud using text-to-speech</li>
+                </ol>
+            </section>
+
+            <section class="reveal" id="development">
+                <h2><span class="icon">🛠️</span> Development</h2>
+                <h3>📋 Prerequisites</h3>
+                <ul>
+                    <li><strong>Node.js</strong> 20+ (<a href="https://nodejs.org/">Download</a>)</li>
+                    <li><strong>yarn</strong></li>
+                    <li><strong>Git</strong></li>
+                </ul>
+                <h3>🔧 Setup</h3>
+<pre><code class="language-bash">
+# Clone the repository
+git clone https://github.com/dortanes/gemini-desktop.git
+cd gemini-desktop
+
+# Install dependencies
+yarn install
+
+# Start development server
+yarn start
+</code></pre>
+                <h3>🏗️ Building</h3>
+<pre><code class="language-bash">
+# Build for Windows specifically
+yarn build-win
+
+# Build for development testing
+yarn dist
+</code></pre>
+                <blockquote><p><strong>Note:</strong> macOS and Linux build scripts are temporarily disabled but will be re-enabled soon. For now, focus is on Windows builds for better testing and stability.</p></blockquote>
+                <h3>🧪 Testing</h3>
+<pre><code class="language-bash">
+# Run in development mode
+yarn start
+
+# Build and test locally
+yarn dist
+</code></pre>
+            </section>
+            
+            <section class="reveal">
+                <h2><span class="icon">⚙️</span> Configuration</h2>
+                <h3>🎛️ Application Settings</h3>
+                <p>The app stores settings in your system's user data directory:</p>
+                <ul>
+                    <li><strong>Windows:</strong> <code>%APPDATA%/gemini-desktop/</code></li>
+                    <li><strong>macOS:</strong> <code>~/Library/Application Support/gemini-desktop/</code></li>
+                    <li><strong>Linux:</strong> <code>~/.config/gemini-desktop/</code></li>
+                </ul>
+            </section>
+
+            <section class="reveal">
+                <h2><span class="icon">📄</span> License</h2>
+                <p>This project is licensed under the <strong>MIT License</strong> - see the LICENSE file for details.</p>
+            </section>
+        </main>
+        
+        <hr>
+
+        <footer class="center-text reveal">
+            <p>Made with ❤️ by <a href="https://github.com/dortanes">dortanes</a></p>
+            <p><strong>⭐ Star this repo if you find it useful! ⭐</strong></p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Theme Toggler ---
+            const themeToggle = document.getElementById('theme-toggle');
+            const htmlEl = document.documentElement;
+            const currentTheme = localStorage.getItem('theme') || 'dark';
+
+            if (currentTheme === 'light') {
+                htmlEl.classList.remove('dark-mode');
+                htmlEl.classList.add('light-mode');
+                themeToggle.checked = false; // In our CSS, unchecked is light
+            } else {
+                htmlEl.classList.add('dark-mode');
+                htmlEl.classList.remove('light-mode');
+                themeToggle.checked = true; // checked is dark
+            }
+            
+            // Re-adjusting logic for the visual toggle
+            // Unchecked = light, Checked = dark
+            if (currentTheme === 'light') {
+                themeToggle.checked = false;
+            } else {
+                themeToggle.checked = true;
+            }
+
+            themeToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    htmlEl.classList.add('dark-mode');
+                    htmlEl.classList.remove('light-mode');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    htmlEl.classList.remove('dark-mode');
+                    htmlEl.classList.add('light-mode');
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+
+            // --- Scroll Reveal Animation ---
+            const revealElements = document.querySelectorAll('.reveal');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target); // Optional: stop observing once visible
+                    }
+                });
+            }, {
+                threshold: 0.1 // Trigger when 10% of the element is visible
+            });
+
+            revealElements.forEach(el => {
+                observer.observe(el);
+            });
+        });
+    </script>
 </body>
 </html>
