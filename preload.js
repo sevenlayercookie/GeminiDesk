@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', (event, ...args) => callback(...args)),
   notifyCanvasState: (isCanvasVisible) => ipcRenderer.send('canvas-state-changed', isCanvasVisible),
   openDownloadPage: () => ipcRenderer.send('open-download-page'),
+  startDownloadUpdate: () => ipcRenderer.send('start-download-update'),
+  installUpdateNow: () => ipcRenderer.send('install-update-now'),
+  closeDownloadWindow: () => ipcRenderer.send('close-download-window'),
   closeUpdateWindow: () => ipcRenderer.send('close-update-window')
 });
 

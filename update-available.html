@@ -211,6 +211,14 @@
             transform: translateY(-4px);
             box-shadow: 0 8px 40px rgba(0, 234, 255, 0.5);
         }
+        #auto-download-btn {
+            background: linear-gradient(90deg, var(--glow-secondary), var(--success-color)); color: #fff;
+            box-shadow: 0 0 25px rgba(57, 255, 141, 0.4);
+        }
+        #auto-download-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 40px rgba(57, 255, 141, 0.5);
+        }
         @keyframes pulse-glow { 0% { box-shadow: 0 0 25px rgba(0, 120, 255, 0.4); } 50% { box-shadow: 0 0 35px rgba(0, 234, 255, 0.5); } 100% { box-shadow: 0 0 25px rgba(0, 120, 255, 0.4); } }
 
         /* --- State 3 & 4: No Update & Error --- */
@@ -268,6 +276,7 @@
                 <div class="button-group">
                     <button id="later-btn" class="button">I'll Live Dangerously</button>
                     <button id="download-btn" class="button">Engage!</button>
+                    <button id="auto-download-btn" class="button">Download For Me</button>
                 </div>
             </div>
             
@@ -344,6 +353,7 @@
                 setTimeout(() => callback(randomResult), 4000);
             },
             openDownloadPage: () => alert("Redirecting to download page... Vrooom!"),
+            startDownloadUpdate: () => alert("Beginning background download..."),
             closeUpdateWindow: () => alert("Closing update window. See you, space cowboy...")
         };
         const api = window.updateAPI ? window.updateAPI : mockAPI;
@@ -373,6 +383,7 @@
         });
 
         document.getElementById('download-btn').addEventListener('click', () => mainAppApi.openDownloadPage());
+        document.getElementById('auto-download-btn').addEventListener('click', () => mainAppApi.startDownloadUpdate());
         document.getElementById('later-btn').addEventListener('click', () => mainAppApi.closeUpdateWindow());
         document.getElementById('close-btn').addEventListener('click', () => mainAppApi.closeUpdateWindow());
         document.getElementById('error-close-btn').addEventListener('click', () => mainAppApi.closeUpdateWindow());
