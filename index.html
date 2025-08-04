@@ -21,31 +21,33 @@
         /* --- Variables & Theme --- */
         /* ------------------- */
         :root {
-            --bg-color: #0d0c1d;
+            --bg-color: #020010;
             --text-color: #e0e0e0;
-            --primary-color: #8ab4f8;
-            --secondary-color: #c58af9;
-            --accent-color: #81c995;
-            --card-bg: rgba(255, 255, 255, 0.05);
+            --primary-color: #a7c7ff;
+            --secondary-color: #d8baff;
+            --accent-color: #a1e9b1;
+            --card-bg: rgba(15, 12, 41, 0.5);
             --card-border: rgba(255, 255, 255, 0.1);
             --code-bg: #1e1e2e;
-            --header-bg: rgba(13, 12, 29, 0.8);
+            --header-bg: rgba(2, 0, 16, 0.6);
             --shadow-color: rgba(0, 0, 0, 0.5);
             --scroll-thumb-color: var(--primary-color);
             --scroll-track-color: var(--code-bg);
+            --glow-color: var(--primary-color);
         }
 
         html.light-mode {
-            --bg-color: #f5f5f7;
+            --bg-color: #f0f2f5;
             --text-color: #1d1d1f;
             --primary-color: #0071e3;
             --secondary-color: #512da8;
             --accent-color: #2e7d32;
-            --card-bg: #ffffff;
-            --card-border: #e0e0e0;
-            --code-bg: #f0f0f0;
-            --header-bg: rgba(245, 245, 247, 0.8);
+            --card-bg: rgba(255, 255, 255, 0.6);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --code-bg: #f5f5f5;
+            --header-bg: rgba(240, 242, 245, 0.7);
             --shadow-color: rgba(0, 0, 0, 0.1);
+            --glow-color: var(--primary-color);
         }
 
         /* ------------------- */
@@ -62,7 +64,34 @@
             line-height: 1.7;
             overflow-x: hidden;
             transition: background-color 0.3s ease, color 0.3s ease;
+            position: relative;
         }
+        
+        /* Interactive Glow Effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(
+                400px circle at var(--x, 50%) var(--y, 50%),
+                rgba(167, 199, 255, 0.15),
+                transparent 80%
+            );
+            z-index: 0;
+            transition: background 0.1s ease-out;
+        }
+        html.light-mode body::before {
+             background: radial-gradient(
+                400px circle at var(--x, 50%) var(--y, 50%),
+                rgba(0, 113, 227, 0.1),
+                transparent 80%
+            );
+        }
+
 
         /* Custom Scrollbar */
         body::-webkit-scrollbar {
@@ -78,16 +107,64 @@
         }
 
         /* ------------------- */
-        /* --- Animated Background --- */
+        /* --- Animated Aurora Background --- */
         /* ------------------- */
-        #particle-canvas {
+        #aurora-background {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1;
-            opacity: 0.5;
+            z-index: -2;
+            overflow: hidden;
+        }
+
+        .aurora-shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+        }
+
+        .shape1 {
+            width: 500px;
+            height: 500px;
+            background: #4e54c8;
+            top: -150px;
+            left: -150px;
+            animation: move1 25s infinite alternate;
+        }
+
+        .shape2 {
+            width: 600px;
+            height: 600px;
+            background: #8f94fb;
+            bottom: -200px;
+            right: -200px;
+            animation: move2 30s infinite alternate;
+        }
+        
+        .shape3 {
+            width: 400px;
+            height: 400px;
+            background: #c58af9;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: move3 20s infinite alternate;
+        }
+
+        @keyframes move1 {
+            from { transform: translate(0, 0) rotate(0deg); }
+            to { transform: translate(200px, 300px) rotate(180deg); }
+        }
+        @keyframes move2 {
+            from { transform: translate(0, 0) rotate(0deg); }
+            to { transform: translate(-300px, -200px) rotate(-180deg); }
+        }
+        @keyframes move3 {
+            from { transform: scale(1) rotate(0deg); }
+            to { transform: scale(1.5) rotate(90deg); }
         }
 
         /* ------------------- */
@@ -104,9 +181,10 @@
             align-items: center;
             z-index: 1000;
             background: var(--header-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--card-border);
+            transition: background 0.3s ease;
         }
 
         .theme-switch-wrapper {
@@ -164,6 +242,8 @@
             max-width: 960px;
             margin: 0 auto;
             padding: 0 1rem;
+            position: relative;
+            z-index: 1;
         }
 
         section {
@@ -180,12 +260,13 @@
         }
 
         h1 {
-            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-size: clamp(2.5rem, 5vw, 4.5rem);
             font-weight: 900;
             margin-bottom: 1rem;
             background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(167, 199, 255, 0.3);
         }
 
         h2 {
@@ -216,6 +297,7 @@
 
         a:hover {
             text-decoration: underline;
+            color: var(--secondary-color);
         }
 
         /* ------------------- */
@@ -239,10 +321,10 @@
 
         .hero p {
             font-size: 1.25rem;
-            color: #b0b0b0;
+            color: #c0c0c0;
         }
         html.light-mode .hero p {
-            color: #555;
+            color: #444;
         }
 
         .hero em {
@@ -264,16 +346,18 @@
         }
 
         .badges img {
-            vertical-align: middle; /* Ensures proper alignment of image content */
+            vertical-align: middle;
         }
 
         .badges a, .badges > img {
             display: inline-block;
-            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
+            border-radius: 6px; /* Match badge style */
         }
 
         .badges a:hover, .badges > img:hover {
-            transform: translateY(-4px) scale(1.03);
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
 
         /* ------------------- */
@@ -292,13 +376,33 @@
             padding: 2rem;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             box-shadow: 0 8px 32px 0 var(--shadow-color);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
         }
 
+        .feature-card:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(300px circle at var(--x-card) var(--y-card), rgba(255,255,255,0.1), transparent 80%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        
+        .feature-card:hover:before {
+            opacity: 1;
+        }
+
+
         .feature-card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-10px) scale(1.02);
             box-shadow: 0 16px 40px 0 var(--shadow-color);
+            border-color: rgba(255, 255, 255, 0.2);
         }
         
         .feature-card h3 {
@@ -315,15 +419,18 @@
         }
 
         /* ------------------- */
-        /* --- Shortcuts Table --- */
+        /* --- Shortcuts Table & Code --- */
         /* ------------------- */
-        .table-container {
-            overflow-x: auto;
+        .table-container, .code-block-wrapper {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 16px;
             padding: 1rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            position: relative;
         }
+        
         table {
             width: 100%;
             border-collapse: collapse;
@@ -342,27 +449,29 @@
             border-bottom: none;
         }
         td code {
-            background: var(--code-bg);
+            background: rgba(0,0,0,0.2);
             padding: 0.2em 0.4em;
             border-radius: 4px;
             font-size: 0.9em;
             color: var(--secondary-color);
+            border: 1px solid var(--card-border);
+        }
+        html.light-mode td code {
+            background: rgba(0,0,0,0.05);
         }
 
-        /* ------------------- */
         /* --- Code Blocks --- */
-        /* ------------------- */
         .code-block-wrapper {
-            position: relative;
+            padding: 0;
         }
         pre {
-            background: var(--code-bg);
-            border: 1px solid var(--card-border);
+            background: transparent;
+            border: none;
             border-radius: 12px;
             padding: 1.5rem;
             overflow-x: auto;
             font-size: 0.95rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0;
         }
         code {
             font-family: 'Courier New', Courier, monospace;
@@ -371,18 +480,20 @@
             position: absolute;
             top: 1rem;
             right: 1rem;
-            background: var(--primary-color);
-            color: var(--bg-color);
-            border: none;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-color);
+            border: 1px solid var(--card-border);
             padding: 0.5rem 0.8rem;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             opacity: 0.5;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
         }
         .code-block-wrapper:hover .copy-btn {
             opacity: 1;
+            background: var(--primary-color);
+            color: var(--bg-color);
         }
         .copy-btn:active {
             transform: scale(0.95);
@@ -436,7 +547,11 @@
 </head>
 <body>
 
-    <canvas id="particle-canvas"></canvas>
+    <div id="aurora-background">
+        <div class="aurora-shape shape1"></div>
+        <div class="aurora-shape shape2"></div>
+        <div class="aurora-shape shape3"></div>
+    </div>
 
     <header class="header">
         <div class="logo-container">
@@ -658,7 +773,7 @@ cd GeminiDesk</code></pre>
             document.documentElement.setAttribute('class', 'light-mode');
             localStorage.setItem('theme', 'light-mode');
         } else {
-            document.documentElement.setAttribute('class', 'dark-mode');
+            document.documentElement.setAttribute('class', '');
             localStorage.setItem('theme', 'dark-mode');
         }
     }
@@ -679,26 +794,15 @@ cd GeminiDesk</code></pre>
         element.classList.add("is-visible");
     };
 
-    const hideScrollElement = (element) => {
-        element.classList.remove("is-visible");
-    };
-
     const handleScrollAnimation = () => {
         scrollElements.forEach((el) => {
             if (elementInView(el, 1.25)) {
                 displayScrollElement(el);
             } 
-            // Optional: to re-animate when scrolling up
-            // else {
-            //     hideScrollElement(el);
-            // }
         })
     }
 
-    window.addEventListener("scroll", () => {
-        handleScrollAnimation();
-    });
-    // Initial check
+    window.addEventListener("scroll", handleScrollAnimation);
     handleScrollAnimation();
 
 
@@ -706,11 +810,9 @@ cd GeminiDesk</code></pre>
     const copyButtons = document.querySelectorAll('.copy-btn');
     copyButtons.forEach(button => {
         button.addEventListener('click', () => {
-            const pre = button.previousElementSibling;
-            const code = pre.querySelector('code');
-            const text = code.innerText;
+            const pre = button.closest('.code-block-wrapper').querySelector('pre');
+            const text = pre.innerText;
 
-            // Use the Clipboard API
             navigator.clipboard.writeText(text).then(() => {
                 button.innerText = 'Copied!';
                 setTimeout(() => {
@@ -718,96 +820,29 @@ cd GeminiDesk</code></pre>
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy: ', err);
-                // Fallback for older browsers
-                try {
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    document.body.appendChild(textArea);
-                    textArea.focus();
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    button.innerText = 'Copied!';
-                    setTimeout(() => {
-                        button.innerText = 'Copy';
-                    }, 2000);
-                } catch (e) {
-                    console.error('Fallback copy failed', e);
-                }
             });
         });
     });
 
-    // --- Animated Background ---
-    const canvas = document.getElementById('particle-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    let particlesArray;
-
-    class Particle {
-        constructor(x, y, directionX, directionY, size, color) {
-            this.x = x;
-            this.y = y;
-            this.directionX = directionX;
-            this.directionY = directionY;
-            this.size = size;
-            this.color = color;
-        }
-
-        draw() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-            ctx.fillStyle = this.color;
-            ctx.fill();
-        }
-
-        update() {
-            if (this.x > canvas.width || this.x < 0) {
-                this.directionX = -this.directionX;
-            }
-            if (this.y > canvas.height || this.y < 0) {
-                this.directionY = -this.directionY;
-            }
-            this.x += this.directionX;
-            this.y += this.directionY;
-            this.draw();
-        }
-    }
-
-    function init() {
-        particlesArray = [];
-        let numberOfParticles = (canvas.height * canvas.width) / 9000;
-        for (let i = 0; i < numberOfParticles; i++) {
-            let size = (Math.random() * 2) + 1;
-            let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
-            let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
-            let directionX = (Math.random() * .4) - .2;
-            let directionY = (Math.random() * .4) - .2;
-            let color = 'rgba(138, 180, 248, 0.5)';
-
-            particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
-        }
-    }
-
-    function animate() {
-        requestAnimationFrame(animate);
-        ctx.clearRect(0, 0, innerWidth, innerHeight);
-
-        for (let i = 0; i < particlesArray.length; i++) {
-            particlesArray[i].update();
-        }
-    }
-
-    window.addEventListener('resize', () => {
-        canvas.width = innerWidth;
-        canvas.height = innerHeight;
-        init();
+    // --- Interactive Glow Effect ---
+    const body = document.body;
+    body.addEventListener('mousemove', e => {
+        body.style.setProperty('--x', e.clientX + 'px');
+        body.style.setProperty('--y', e.clientY + 'px');
+    });
+    
+    // --- Card Glow Effect ---
+    const cards = document.querySelectorAll('.feature-card');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            card.style.setProperty('--x-card', x + 'px');
+            card.style.setProperty('--y-card', y + 'px');
+        });
     });
 
-    init();
-    animate();
     </script>
 </body>
 </html>
