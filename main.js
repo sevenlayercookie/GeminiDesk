@@ -14,6 +14,7 @@ const autoLauncher = new AutoLaunch({
     name: 'GeminiApp',
     path: app.getPath('exe'),
 });
+const isMac = process.platform === 'darwin';
 
 // ================================================================= //
 // Settings Management
@@ -290,8 +291,20 @@ function registerShortcuts() {
     // Unregister all shortcuts before registering new ones to avoid conflicts
     globalShortcut.unregisterAll();
 
-    const shortcuts = settings.shortcuts;
-
+const cfg = settings.shortcuts;
+const hotkeys = {
+  showHide:      isMac ? 'Command+G'            : cfg.showHide,
+  quit:          isMac ? 'Command+Q'            : cfg.quit,
+  showInstructions: isMac ? 'Command+I'         : cfg.showInstructions,
+  screenshot:    isMac ? 'Command+Shift+5'      : cfg.screenshot,
+  newChatPro:    isMac ? 'Command+P'            : cfg.newChatPro,
+  newChatFlash:  isMac ? 'Command+F'            : cfg.newChatFlash,
+  newWindow:     isMac ? 'Command+N'            : cfg.newWindow,
+  search:        isMac ? 'Command+S'            : cfg.search,
+};
+const shortcuts = isMac
+  ? hotkeys
+  : cfg;
 let lastFocusedWindow = null;
 
 if (shortcuts.showHide) {
@@ -395,64 +408,81 @@ if (shortcuts.screenshot) {
         proceedWithScreenshot();
     });
 
-    function proceedWithScreenshot() {
-        clipboard.clear();
-        const snippingTool = spawn('explorer', ['ms-screenclip:'], { detached: true, stdio: 'ignore' });
-        snippingTool.unref();
-        let processExited = false;
-        snippingTool.on('exit', () => {
-            processExited = true;
-        });
-        
-        snippingTool.on('error', (err) => {
-            console.error('Failed to start snipping tool:', err);
-            isScreenshotProcessActive = false;
-        });
-        
-        let checkAttempts = 0;
-        const maxAttempts = 60;
-        const intervalId = setInterval(() => {
-            const image = clipboard.readImage();
-            
-            if (!image.isEmpty() && processExited) {
-                clearInterval(intervalId);
-                
-                if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
-                    // וודא שהחלון נראה ובפוקוס
-                    if (!screenshotTargetWindow.isVisible()) screenshotTargetWindow.show();
-                    if (screenshotTargetWindow.isMinimized()) screenshotTargetWindow.restore();
-                    
-                    // קבע זמנית alwaysOnTop כדי למנוע הסתרה
-                    const originalAlwaysOnTop = screenshotTargetWindow.isAlwaysOnTop();
-                    screenshotTargetWindow.setAlwaysOnTop(true);
-                    screenshotTargetWindow.focus();
-                    
-                    const viewInstance = screenshotTargetWindow.getBrowserView();
-                    if (viewInstance && viewInstance.webContents) {
-                        setTimeout(() => {
-                            viewInstance.webContents.focus();
-                            viewInstance.webContents.paste();
-                            console.log('Screenshot pasted!');
-                            
-                            // החזר את ההגדרה המקורית של alwaysOnTop
-                            setTimeout(() => {
-                                if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
-                                    screenshotTargetWindow.setAlwaysOnTop(settings.alwaysOnTop);
-                                }
-                            }, 500);
-                        }, 200);
-                    }
-                }
-                isScreenshotProcessActive = false;
-                screenshotTargetWindow = null;
-            } else if (checkAttempts++ > maxAttempts) {
-                clearInterval(intervalId);
-                isScreenshotProcessActive = false;
-                screenshotTargetWindow = null;
-            }
-        }, 500);
+function proceedWithScreenshot() {
+    // נקה את הלוח
+    clipboard.clear();
+
+    // בחר פקודת צילום מסך לפי פלטפורמה
+    let cmd, args;
+    if (process.platform === 'win32') {
+        // Windows: Snip & Sketch
+        cmd = 'explorer';
+        args = ['ms-screenclip:'];
+    } else {
+        // macOS/Linux: screencapture אינטראקטיבי + העתקה ללוח
+        cmd = 'screencapture';
+        args = ['-i', '-c']; // שים לב לשינוי: פירוק הדגלים למערך נפרד :contentReference[oaicite:1]{index=1}
     }
+
+    // השקת כלי הצילום
+    const snippingTool = spawn(cmd, args, { detached: true, stdio: 'ignore' });
+    snippingTool.unref();
+
+    let processExited = false;
+    snippingTool.on('exit', () => {
+        processExited = true;
+    });
+    snippingTool.on('error', (err) => {
+        console.error('Failed to start snipping tool:', err);
+        isScreenshotProcessActive = false;
+    });
+
+    // בדיקה רציפה של הלוח עד שמתקבל צילום
+    let checkAttempts = 0;
+    const maxAttempts = 60;
+    const intervalId = setInterval(() => {
+        const image = clipboard.readImage();
+
+        if (!image.isEmpty() && processExited) {
+            clearInterval(intervalId);
+
+            if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
+                // הבט שהחלון פעיל ומרכז עליו פוקוס
+                if (!screenshotTargetWindow.isVisible()) screenshotTargetWindow.show();
+                if (screenshotTargetWindow.isMinimized()) screenshotTargetWindow.restore();
+
+                // שמור ושנה זמנית את alwaysOnTop כדי למנוע הסתרה
+                const originalAlwaysOnTop = screenshotTargetWindow.isAlwaysOnTop();
+                screenshotTargetWindow.setAlwaysOnTop(true);
+                screenshotTargetWindow.focus();
+
+                const viewInstance = screenshotTargetWindow.getBrowserView();
+                if (viewInstance && viewInstance.webContents) {
+                    setTimeout(() => {
+                        viewInstance.webContents.focus();
+                        viewInstance.webContents.paste();
+                        console.log('Screenshot pasted!');
+
+                        // החזר את ההגדרה המקורית של alwaysOnTop
+                        setTimeout(() => {
+                            if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
+                                screenshotTargetWindow.setAlwaysOnTop(settings.alwaysOnTop);
+                            }
+                        }, 500);
+                    }, 200);
+                }
+            }
+
+            isScreenshotProcessActive = false;
+            screenshotTargetWindow = null;
+        } else if (checkAttempts++ > maxAttempts) {
+            clearInterval(intervalId);
+            isScreenshotProcessActive = false;
+            screenshotTargetWindow = null;
+        }
+    }, 500);
 }
+
 // Add shortcut for search
     if (shortcuts.search) {
         globalShortcut.register(shortcuts.search, () => {
