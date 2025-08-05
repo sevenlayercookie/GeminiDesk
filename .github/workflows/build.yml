@@ -1,59 +1,60 @@
-name: Build & (Tag) Release macOS App
+name: Build & (Tag) Release macOS App # שם זרימת העבודה
 
 on:
   push:
     branches:
-      - main        # הירוץ על כל push ל־main
+      - main           # ירוץ על כל push לענף הראשי (main)
     tags:
-      - 'v*.*.*'    # ובנוסף ירוץ (ויפרסם) על push של תגיות כמו v1.2.3
+      - 'v*.*.*'       # בנוסף, ירוץ (ויפרסם) על push של תגיות כמו v1.2.3
 
 permissions:
-  contents: write
-  packages: write
+  contents: write      # הרשאות כתיבה לתוכן הריפוזיטורי (לצורך יצירת ריליס)
+  packages: write      # הרשאות כתיבה לחבילות (לצורך העלאת ארטיפקטים)
 
 jobs:
   build-mac:
-    runs-on: macos-latest
+    runs-on: macos-latest # זרימת העבודה תרוץ על מכונה וירטואלית של macOS
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3 # שלב: משיכת קוד הריפוזיטורי
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3 # שלב: הגדרת סביבת Node.js
         with:
-          node-version: 20
+          node-version: 20 # שימוש בגרסה 20 של Node.js
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci # שלב: התקנת תלויות הפרויקט
 
       - name: Build (and publish on tags)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן ה-GitHub לפרסום
         run: |
-          # בונה תמיד, אבל only onTagOrDraft יפרסם רק כשזו תגית
+          # שלב: בניית האפליקציה. תמיד בונה, אבל מפרסם רק כאשר זו תגית.
           npm run build -- --publish onTagOrDraft
 
       - name: Upload macOS DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4 # שלב: העלאת קובץ ה-DMG כארטיפקט
         with:
-          name: GeminiDesk-mac-dmg
-          path: dist/*.dmg
-    - name: Create GitHub Release
-      id: cr
-      uses: actions/create-release@v1
-      with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Release ${{ github.ref_name }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: GeminiDesk-mac-dmg # שם הארטיפקט
+          path: dist/*.dmg # נתיב הקבצים להעלאה
 
-    - name: Upload ZIP to Release
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.cr.outputs.upload_url }}
-        asset_path: dist/*.zip
-        asset_name: GeminiApp-${{ github.ref_name }}.zip
-        asset_content_type: application/zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        id: cr # מזהה ייחודי לשלב זה, כדי שנוכל להתייחס לפלטים שלו
+        uses: actions/create-release@v1 # שלב: יצירת ריליס חדש ב-GitHub
+        with:
+          tag_name: ${{ github.ref_name }} # שם התגית ישמש כשם הריליס
+          release_name: Release ${{ github.ref_name }} # שם הריליס שיוצג
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן ה-GitHub ליצירת הריליס
+
+      - name: Upload ZIP to Release
+        uses: actions/upload-release-asset@v1 # שלב: העלאת קובץ ה-ZIP כנכס לריליס
+        with:
+          upload_url: ${{ steps.cr.outputs.upload_url }} # כתובת ה-URL להעלאה מהשלב הקודם
+          asset_path: dist/*.zip # נתיב קובץ ה-ZIP להעלאה
+          asset_name: GeminiApp-${{ github.ref_name }}.zip # שם הנכס שיוצג בריליס
+          asset_content_type: application/zip # סוג התוכן של הנכס
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן ה-GitHub להעלאת הנכס
