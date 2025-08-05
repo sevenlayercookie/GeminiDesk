@@ -10,11 +10,20 @@ let confirmWin = null;
 let isQuitting = false;
 let updateWin = null;
 let downloadWin = null;
-const autoLauncher = new AutoLaunch({
-    name: 'GeminiApp',
-    path: app.getPath('exe'),
-});
+// אחרי שהגדרת כבר: const isMac = process.platform === 'darwin';
+const execPath = process.execPath;
+
 const isMac = process.platform === 'darwin';
+const launcherPath = isMac
+  ? path.resolve(execPath, '..', '..', '..')
+  : execPath;
+
+const autoLauncher = new AutoLaunch({
+  name: 'GeminiApp',
+  path: launcherPath,
+  isHidden: true,    // על macOS מוסיף את האפליקציה ל־Login Items בנסתר
+});
+
 
 // ================================================================= //
 // Settings Management
@@ -305,6 +314,7 @@ const hotkeys = {
 const shortcuts = isMac
   ? hotkeys
   : cfg;
+
 let lastFocusedWindow = null;
 
 if (shortcuts.showHide) {
@@ -482,7 +492,7 @@ function proceedWithScreenshot() {
         }
     }, 500);
 }
-
+}
 // Add shortcut for search
     if (shortcuts.search) {
         globalShortcut.register(shortcuts.search, () => {
