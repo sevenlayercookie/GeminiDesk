@@ -39,4 +39,21 @@ jobs:
         with:
           name: GeminiDesk-mac-dmg
           path: dist/*.dmg
+    - name: Create GitHub Release
+      id: cr
+      uses: actions/create-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Upload ZIP to Release
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.cr.outputs.upload_url }}
+        asset_path: dist/*.zip
+        asset_name: GeminiApp-${{ github.ref_name }}.zip
+        asset_content_type: application/zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
