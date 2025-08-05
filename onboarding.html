@@ -339,51 +339,61 @@
     </div>
 </div>
 
-    <div class="container">
-        <h1 class="title">Welcome to GeminiDesk</h1>
-        <p class="subtitle">Your AI assistant, supercharged for your desktop.</p>
-
-        <ul class="shortcuts-list">
-            <li class="shortcut-item">
-                <span class="shortcut-desc">Show / Hide Window</span>
-                <span class="shortcut-key" id="shortcut-key-showHide"></span>
-            </li>
-            <li class="shortcut-item">
-                <span class="shortcut-desc">Open New Window</span>
-                <span class="shortcut-key" id="shortcut-key-newWindow"></span>
-            </li>
-            <li class="shortcut-item">
-                <span class="shortcut-desc">Search Chats</span>
-                <span class="shortcut-key" id="shortcut-key-search"></span>
-            </li>
-            <li class="shortcut-item">
-                <span class="shortcut-desc">Screenshot to Chat</span>
-                <span class="shortcut-key" id="shortcut-key-screenshot"></span>
-            </li>
-            <li class="shortcut-item">
-                <span class="shortcut-desc">New Chat (Pro Model)</span>
-                <span class="shortcut-key" id="shortcut-key-newChatPro"></span>
-            </li>
-            <li class="shortcut-item">
-                <span class="shortcut-desc">New Chat (Flash Model)</span>
-                <span class="shortcut-key" id="shortcut-key-newChatFlash"></span>
-            </li>
-            <li class="shortcut-item">
-                <span class="shortcut-desc">See Instructions Again</span>
-                <span class="shortcut-key" id="shortcut-key-showInstructions"></span>
-            </li>
-            <li class="shortcut-item">
-                <span class="shortcut-desc">Quit Application</span>
-                <span class="shortcut-key" id="shortcut-key-quit"></span>
-            </li>
-             <li class="shortcut-item">
-                <span class="shortcut-desc">Move Window</span>
-                <span class="shortcut-key">Drag Top Bar</span>
-            </li>
-        </ul>
-
-        <button class="launch-button" id="launch-button">Got it! Launch Gemini</button>
-    </div>
+    <ul class="shortcuts-list">
+  <li class="shortcut-item">
+    <span class="shortcut-desc">Show / Hide Window</span>
+    <span class="shortcut-key shortcut" data-win="Alt+G" data-mac="⌘+G">
+      <span class="key"></span>
+    </span>
+  </li>
+  <li class="shortcut-item">
+    <span class="shortcut-desc">Open New Window</span>
+    <span class="shortcut-key shortcut" data-win="Alt+N" data-mac="⌘+N">
+      <span class="key"></span>
+    </span>
+  </li>
+  <li class="shortcut-item">
+    <span class="shortcut-desc">Search Chats</span>
+    <span class="shortcut-key shortcut" data-win="Alt+S" data-mac="⌘+S">
+      <span class="key"></span>
+    </span>
+  </li>
+  <li class="shortcut-item">
+    <span class="shortcut-desc">Screenshot to Chat</span>
+    <span class="shortcut-key shortcut" data-win="Alt+Shift+S" data-mac="⌘+Shift+5">
+      <span class="key"></span>
+    </span>
+  </li>
+  <li class="shortcut-item">
+    <span class="shortcut-desc">New Chat (Pro Model)</span>
+    <span class="shortcut-key shortcut" data-win="Alt+P" data-mac="⌘+P">
+      <span class="key"></span>
+    </span>
+  </li>
+  <li class="shortcut-item">
+    <span class="shortcut-desc">New Chat (Flash Model)</span>
+    <span class="shortcut-key shortcut" data-win="Alt+F" data-mac="⌘+F">
+      <span class="key"></span>
+    </span>
+  </li>
+  <li class="shortcut-item">
+    <span class="shortcut-desc">See Instructions Again</span>
+    <span class="shortcut-key shortcut" data-win="Alt+I" data-mac="⌘+I">
+      <span class="key"></span>
+    </span>
+  </li>
+  <li class="shortcut-item">
+    <span class="shortcut-desc">Quit Application</span>
+    <span class="shortcut-key shortcut" data-win="Alt+Q" data-mac="⌘+Q">
+      <span class="key"></span>
+    </span>
+  </li>
+  <li class="shortcut-item">
+    <span class="shortcut-desc">Move Window</span>
+    <!-- ב־mac/ווינדוס תמיד אותו: גרור משורת הכותרת -->
+    <span class="shortcut-key">Drag Top Bar</span>
+  </li>
+</ul>
 
 <script>
 // No need to change the script's logic, it will still work perfectly
@@ -463,5 +473,15 @@ const syncShortcuts = (settings) => {
     document.getElementById('launch-button').addEventListener('click', () => window.electronAPI.completeOnboarding());
 });
 </script>
+    <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    document.querySelectorAll('.shortcut').forEach(el => {
+      el.querySelector('.key').textContent =
+        isMac ? el.dataset.mac : el.dataset.win;
+    });
+  });
+</script>
+
 </body>
 </html>
