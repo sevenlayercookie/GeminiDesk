@@ -44,6 +44,31 @@
         "repo": "GeminiDesk"
       }
     ],
+    "mac": {
+  "target": ["dmg", "zip"],
+  "artifactName": "${productName}-${version}-${arch}.${ext}"
+},
+"dmg": {
+  "background": null,
+  "format": "ULFO",
+  "window": {
+    "width": 600,
+    "height": 400
+  },
+  "contents": [
+    {
+      "x": 130,
+      "y": 220
+    },
+    {
+      "x": 410,
+      "y": 220,
+      "type": "link",
+      "path": "/Applications"
+    }
+  ]
+},
+
     "win": {
       "target": [
         "nsis"
