@@ -211,14 +211,6 @@
             transform: translateY(-4px);
             box-shadow: 0 8px 40px rgba(0, 234, 255, 0.5);
         }
-        #auto-download-btn {
-            background: linear-gradient(90deg, var(--glow-secondary), var(--success-color)); color: #fff;
-            box-shadow: 0 0 25px rgba(57, 255, 141, 0.4);
-        }
-        #auto-download-btn:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 40px rgba(57, 255, 141, 0.5);
-        }
         @keyframes pulse-glow { 0% { box-shadow: 0 0 25px rgba(0, 120, 255, 0.4); } 50% { box-shadow: 0 0 35px rgba(0, 234, 255, 0.5); } 100% { box-shadow: 0 0 25px rgba(0, 120, 255, 0.4); } }
 
         /* --- State 3 & 4: No Update & Error --- */
@@ -276,7 +268,6 @@
                 <div class="button-group">
                     <button id="later-btn" class="button">I'll Live Dangerously</button>
                     <button id="download-btn" class="button">Engage!</button>
-                    <button id="auto-download-btn" class="button">Download For Me</button>
                 </div>
             </div>
             
@@ -303,45 +294,99 @@
     </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // הקשבה לאירועי עדכון אמיתיים מ-preload.js
-    window.updateAPI.onUpdateInfo(info => {
-      switch (info.status) {
-        case 'checking':
-          showState('checking');
-          break;
-        case 'update-available':
-          // הצגת גרסה והערות שחרור
-          document.getElementById('version').textContent =
-            `Version ${info.version} is ready for deployment!`;
-          document.getElementById('release-notes').innerHTML =
-            info.releaseNotesHTML;
-          showState('found');
-          break;
-        case 'up-to-date':
-          showState('notFound');
-          break;
-        case 'error':
-          document.getElementById('error-message').textContent =
-            info.error || 'Unknown error';
-          showState('error');
-          break;
-      }
+    const states = {
+        checking: document.getElementById('checking-state'),
+        found: document.getElementById('update-found-state'),
+        notFound: document.getElementById('no-update-state'),
+        error: document.getElementById('error-state'),
+    };
+    let currentStateKey = 'checking';
+
+    function showState(newStateKey) {
+        if (newStateKey === currentStateKey || !states[newStateKey]) return;
+
+        const oldState = states[currentStateKey];
+        const newState = states[newStateKey];
+        
+        if (oldState) {
+            oldState.classList.add('exiting');
+            
+            // Wait for the exit animation to finish before hiding it completely
+            setTimeout(() => {
+                oldState.classList.remove('active', 'exiting');
+            }, 500); // This duration should match the transition duration in CSS
+        }
+        
+        newState.classList.add('active');
+        currentStateKey = newStateKey;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- API Mock for testing in browser ---
+        // You can comment this out when using in Electron.
+        const mockAPI = {
+            onUpdateInfo: (callback) => {
+                // Simulate a check
+                setTimeout(() => callback({ status: 'checking' }), 500);
+                
+                // Simulate one of the results after a delay
+                const results = [
+                    { 
+                        status: 'update-available', 
+                        version: 'v2.0-SUPERNOVA', 
+                        releaseNotesHTML: "<h3>What's new in this galaxy?</h3><ul><li>A revolutionary feature that launches your productivity into the stratosphere.</li><li>Squashed some intergalactic bugs that were messing with the timeline.</li><li>The UI now feels like it was taken from a spaceship. <a href='#'>Read more</a>.</li><li>Added a mysterious new button. We're not sure what it does. Good luck.</li></ul>" 
+                    },
+                    { status: 'up-to-date' },
+                    { status: 'error', message: "connection timed out" }
+                ];
+                const randomResult = results[Math.floor(Math.random() * results.length)];
+
+                setTimeout(() => callback(randomResult), 4000);
+            },
+            openDownloadPage: () => alert("Redirecting to download page... Vrooom!"),
+            closeUpdateWindow: () => alert("Closing update window. See you, space cowboy...")
+        };
+        const api = window.updateAPI ? window.updateAPI : mockAPI;
+        const mainAppApi = window.electronAPI ? window.electronAPI : mockAPI;
+        // --- End of Mock ---
+
+        api.onUpdateInfo((data) => {
+            switch(data.status) {
+                case 'checking':
+                    showState('checking');
+                    break;
+                case 'update-available':
+                    document.getElementById('version').textContent = `Version ${data.version} is ready for deployment!`;
+                    document.getElementById('release-notes').innerHTML = data.releaseNotesHTML;
+                    showState('found');
+                    break;
+                case 'up-to-date':
+                    showState('notFound');
+                    break;
+                case 'error':
+                    if (data.message) {
+                        document.getElementById('error-message').textContent = `The server mumbled something about: "${data.message}". Please try again later.`;
+                    }
+                    showState('error');
+                    break;
+            }
+        });
+
+        document.getElementById('download-btn').addEventListener('click', () => mainAppApi.openDownloadPage());
+        document.getElementById('later-btn').addEventListener('click', () => mainAppApi.closeUpdateWindow());
+        document.getElementById('close-btn').addEventListener('click', () => mainAppApi.closeUpdateWindow());
+        document.getElementById('error-close-btn').addEventListener('click', () => mainAppApi.closeUpdateWindow());
+
+        // Parallax background effect
+        document.body.addEventListener('mousemove', (e) => {
+            const { clientX, clientY } = e;
+            const { innerWidth, innerHeight } = window;
+            const x = (clientX / innerWidth) - 0.5;
+            const y = (clientY / innerHeight) - 0.5;
+            document.documentElement.style.setProperty('--mouse-x', x);
+            document.documentElement.style.setProperty('--mouse-y', y);
+        });
     });
-
-    // כפתורי פעולה
-    document.getElementById('download-btn')
-      .addEventListener('click', () => window.electronAPI.openDownloadPage());
-    document.getElementById('auto-download-btn')
-      .addEventListener('click', () => window.electronAPI.startDownloadUpdate());
-    document.getElementById('later-btn')
-      .addEventListener('click', () => window.electronAPI.closeUpdateWindow());
-    document.getElementById('close-btn')
-      .addEventListener('click', () => window.electronAPI.closeUpdateWindow());
-    document.getElementById('error-close-btn')
-      .addEventListener('click', () => window.electronAPI.closeUpdateWindow());
-  });
 </script>
-
 </body>
 </html>
