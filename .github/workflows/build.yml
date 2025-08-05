@@ -1,46 +1,41 @@
-name: Build & Publish macOS App
+name: Build & (Tag) Release macOS App
 
-# 1) רק כשמייצרים תגית חדשה (למשל v4.6.0) יתחיל ה-workflow
 on:
   push:
+    branches:
+      - main        # הירוץ על כל push ל־main
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'    # ובנוסף ירוץ (ויפרסם) על push של תגיות כמו v1.2.3
 
-# 2) נעניק ל-GITHUB_TOKEN הרשאות מלאות ל־Releases
 permissions:
-  contents: write    # כתיבת קבצים ל-repo
-  packages: write    # פרסום למעטפות (artifacts)
+  contents: write
+  packages: write
 
 jobs:
   build-mac:
     runs-on: macos-latest
 
     steps:
-      # 3) שלב בסיסי: הורדת הקוד
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 4) התקנת Node
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
 
-      # 5) התקנת התלויות
       - name: Install dependencies
         run: npm ci
 
-      # 6) בנייה + פרסום ל-Release
-      - name: Build & Publish
+      - name: Build (and publish on tags)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # טוקן עם ההרשאות שהגדרנו מעלה
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # מעבירים ל-electron-builder את הדגל לפרסם על Tag/Draft
+          # בונה תמיד, אבל only onTagOrDraft יפרסם רק כשזו תגית
           npm run build -- --publish onTagOrDraft
 
-      # 7) (אופציונלי) מעלה גם את ה-dist/Artifacts כקובץ נפרד
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: GeminiDesk-mac
+          name: GeminiDesk-dist
           path: dist/
