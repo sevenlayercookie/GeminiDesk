@@ -51,7 +51,7 @@
 "dmg": {
   "background": null,
   "format": "UDZO",
-  "volumeName": "${productName}-${version}-${arch}",
+  "title": "${productName}-${version}-${arch}",
   "window": {
     "width": 600,
     "height": 400
