@@ -34,8 +34,9 @@ jobs:
           # בונה תמיד, אבל only onTagOrDraft יפרסם רק כשזו תגית
           npm run build -- --publish onTagOrDraft
 
-      - name: Upload artifacts
+      - name: Upload macOS DMG
         uses: actions/upload-artifact@v4
         with:
-          name: GeminiDesk-dist
-          path: dist/
+          name: GeminiDesk-mac-dmg
+          path: dist/*.dmg
+
