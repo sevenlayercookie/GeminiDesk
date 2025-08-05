@@ -27,15 +27,18 @@ jobs:
       - name: Install dependencies
         run: npm ci # שלב: התקנת תלויות הפרויקט
 
-      - name: Build (and publish on tags)
+      - name: Build (do not publish directly)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן ה-GitHub לפרסום
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן ה-GitHub (למקרה ש-electron-builder יצטרך אותו פנימית)
         run: |
-          # שלב: בניית האפליקציה. תמיד בונה, אבל מפרסם רק כאשר זו תגית.
-          npm run build -- --publish onTagOrDraft
+          # שלב: בניית האפליקציה.
+          # הפקודה '--publish never' מבטיחה ש-electron-builder יבנה את הקבצים
+          # אך לא ינסה לפרסם אותם ישירות ל-GitHub Release.
+          # הקבצים (DMG ו-ZIP) יישארו בתיקיית dist/ לצורך העלאה בשלבים הבאים.
+          npm run build -- --publish never
 
-      - name: Upload macOS DMG
-        uses: actions/upload-artifact@v4 # שלב: העלאת קובץ ה-DMG כארטיפקט
+      - name: Upload macOS DMG Artifact
+        uses: actions/upload-artifact@v4 # שלב: העלאת קובץ ה-DMG כארטיפקט של זרימת העבודה
         with:
           name: GeminiDesk-mac-dmg # שם הארטיפקט
           path: dist/*.dmg # נתיב הקבצים להעלאה
@@ -43,6 +46,8 @@ jobs:
       - name: Create GitHub Release
         id: cr # מזהה ייחודי לשלב זה, כדי שנוכל להתייחס לפלטים שלו
         uses: actions/create-release@v1 # שלב: יצירת ריליס חדש ב-GitHub
+        # שלב זה ירוץ רק כאשר ה-push הוא של תגית (לדוגמה: v1.0.0)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         with:
           tag_name: ${{ github.ref_name }} # שם התגית ישמש כשם הריליס
           release_name: Release ${{ github.ref_name }} # שם הריליס שיוצג
@@ -51,6 +56,8 @@ jobs:
 
       - name: Upload ZIP to Release
         uses: actions/upload-release-asset@v1 # שלב: העלאת קובץ ה-ZIP כנכס לריליס
+        # שלב זה ירוץ רק כאשר ה-push הוא של תגית
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         with:
           upload_url: ${{ steps.cr.outputs.upload_url }} # כתובת ה-URL להעלאה מהשלב הקודם
           asset_path: dist/*.zip # נתיב קובץ ה-ZIP להעלאה
