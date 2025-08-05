@@ -1,26 +1,44 @@
-name: Build macOS App
+name: Build & Publish macOS App
 
+# 1) רק כשמייצרים תגית חדשה (למשל v4.6.0) יתחיל ה-workflow
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*.*.*'
+
+# 2) נעניק ל-GITHUB_TOKEN הרשאות מלאות ל־Releases
+permissions:
+  contents: write    # כתיבת קבצים ל-repo
+  packages: write    # פרסום למעטפות (artifacts)
 
 jobs:
   build-mac:
     runs-on: macos-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      # 3) שלב בסיסי: הורדת הקוד
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 4) התקנת Node
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: 20
 
+      # 5) התקנת התלויות
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build macOS App
+      # 6) בנייה + פרסום ל-Release
+      - name: Build & Publish
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # טוקן עם ההרשאות שהגדרנו מעלה
+        run: |
+          # מעבירים ל-electron-builder את הדגל לפרסם על Tag/Draft
+          npm run build -- --publish onTagOrDraft
 
+      # 7) (אופציונלי) מעלה גם את ה-dist/Artifacts כקובץ נפרד
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
