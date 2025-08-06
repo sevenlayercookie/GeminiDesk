@@ -13,6 +13,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   confirmReset: () => ipcRenderer.send('confirm-reset-action'),
   cancelReset: () => ipcRenderer.send('cancel-reset-action'),
   checkForUpdates: () => ipcRenderer.send('check-for-updates'),
+    manualCheckForNotifications: () => ipcRenderer.send('manual-check-for-notifications'),
+  onNotificationCheckStatus: (callback) =>
+    ipcRenderer.on('notification-check-status', (_event, result) => callback(result)),
+
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, ...args) => callback(...args)),
   onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', (event, ...args) => callback(...args)),
   notifyCanvasState: (isCanvasVisible) => ipcRenderer.send('canvas-state-changed', isCanvasVisible),
@@ -72,4 +76,10 @@ window.addEventListener('load', () => {
     });
     // בצע בדיקה ראשונית אחת מיד עם טעינת הדף
     checkForPanelAndNotify();
+});
+// In preload.js, add this at the end
+
+contextBridge.exposeInMainWorld('notificationAPI', {
+    closeWindow: () => ipcRenderer.send('close-notification-window'),
+    onReceiveNotification: (callback) => ipcRenderer.on('notification-data', (event, ...args) => callback(...args)),
 });

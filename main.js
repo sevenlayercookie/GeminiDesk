@@ -10,7 +10,8 @@ let confirmWin = null;
 let isQuitting = false;
 let updateWin = null;
 let downloadWin = null;
-// אחרי שהגדרת כבר: const isMac = process.platform === 'darwin';
+let notificationWin = null;
+let lastFetchedMessageId = null;
 const execPath = process.execPath;
 
 const isMac = process.platform === 'darwin';
@@ -34,6 +35,9 @@ const defaultSettings = {
   onboardingShown: false,
   autoStart: false,
   alwaysOnTop: true,
+  lastShownNotificationId: null, 
+  autoCheckNotifications: true,
+  enableCanvasResizing: true,
   shortcuts: {
     showHide: 'Alt+G',
     quit: 'Alt+Q',
@@ -52,7 +56,6 @@ function scheduleDailyUpdateCheck() {
   const checkForUpdates = () => {
     const now = new Date().getTime();
     const oneDay = 24 * 60 * 60 * 1000; // Milliseconds in a day
-
     // Check if more than a day has passed since the last check
     if (!settings.lastUpdateCheck || (now - settings.lastUpdateCheck > oneDay)) {
       console.log('Checking for updates...');
@@ -265,7 +268,83 @@ function getSettings() {
   }
   return defaultSettings;
 }
+function createNotificationWindow(messageData) {
+  if (notificationWin) {
+    notificationWin.focus();
+    return;
+  }
 
+  // הגדלנו את החלון לגודל נוח יותר
+  notificationWin = new BrowserWindow({
+    width: 550, // <-- הוגדל מ-450
+    height: 450, // <-- הוגדל מ-350
+    frame: false,
+    alwaysOnTop: true,
+    show: false,
+    transparent: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+    }
+  });
+
+  notificationWin.loadFile('notification.html');
+
+  notificationWin.once('ready-to-show', () => {
+    notificationWin.show();
+    notificationWin.webContents.send('notification-data', messageData);
+  });
+
+  notificationWin.on('closed', () => {
+    notificationWin = null;
+  });
+}
+async function checkForNotifications(event = null) {
+  try {
+    const response = await fetch('https://geminidesk.hillelben14.workers.dev/latest-message');
+    
+    if (response.ok) {
+      const messageData = await response.json();
+      
+      if (messageData && messageData.id && messageData.id !== settings.lastShownNotificationId) {
+        console.log(`New notification found: ID ${messageData.id}`);
+        settings.lastShownNotificationId = messageData.id; 
+        saveSettings(settings);
+        createNotificationWindow(messageData);
+        // אם הבדיקה ידנית, שלח סטטוס הצלחה
+        if (event) {
+          event.sender.send('notification-check-status', { status: 'found' });
+        }
+      } else {
+        // אם הבדיקה ידנית ולא נמצא כלום, שלח סטטוס "לא נמצא"
+        if (event) {
+          event.sender.send('notification-check-status', { status: 'not-found' });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to check for notifications:', error.message);
+    // אם הבדיקה ידנית והייתה שגיאה, שלח סטטוס שגיאה
+    if (event) {
+      event.sender.send('notification-check-status', { status: 'error', message: error.message });
+    }
+  }
+}
+let notificationIntervalId = null;
+
+function scheduleNotificationCheck() {
+  // נקה את האינטרוול הקודם אם קיים
+  if (notificationIntervalId) {
+    clearInterval(notificationIntervalId);
+    notificationIntervalId = null;
+  }
+
+  // אם המשתמש רוצה בדיקה אוטומטית, הגדר אותה מחדש
+  if (settings.autoCheckNotifications) {
+    const oneDayInMs = 24 * 60 * 60 * 1000;
+    notificationIntervalId = setInterval(checkForNotifications, oneDayInMs);
+  }
+}
 function saveSettings(settings) {
   try {
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
@@ -593,6 +672,9 @@ function loadGemini(targetWin) {
 // ================================================================= //
 
 async function setCanvasMode(isCanvas, targetWin) {
+  if (!settings.enableCanvasResizing) {
+    return;
+  }
   if (!targetWin || targetWin.isDestroyed() || isCanvas === targetWin.isCanvasActive) {
     return;
   }
@@ -831,73 +913,78 @@ ipcMain.on('toggle-full-screen', (event) => {
 
 app.whenReady().then(() => {
   createWindow();
-const ses = session.defaultSession;
+
+  // --- 1. טיפול בבקשות הרשאה (כמו מיקרופון) ---
+  const ses = session.defaultSession;
   ses.setPermissionRequestHandler((webContents, permission, callback) => {
-    // We will check for the 'media' permission which includes the microphone.
+    // בדוק אם הבקשה היא עבור 'media' (כולל מיקרופון)
     if (permission === 'media') {
-      // Automatically grant the permission every time without asking the user.
-      // This is simpler and more reliable for fixing intermittent issues.
+      // אשר את ההרשאה אוטומטית בכל פעם
       callback(true);
     } else {
-      // For any other permission request, deny it for security.
+      // סרב לכל בקשת הרשאה אחרת מטעמי אבטחה
       callback(false);
     }
   });
-  
-  // פתרון לבעיית צילום מסך של Windows שגורם לחלונות להעלם
+
+  // --- 2. פתרון לבאג צילום מסך ב-Windows שגורם לחלונות להיעלם ---
   const preventWindowHiding = () => {
     const allWindows = BrowserWindow.getAllWindows();
     allWindows.forEach(win => {
       if (win && !win.isDestroyed() && win.isVisible()) {
-        // שמור את המצב הנוכחי ומנע מהחלון להסתתר
+        // הגדר זמנית את החלון ל"תמיד למעלה" כדי למנוע ממנו להסתתר
         win.setAlwaysOnTop(true);
         setTimeout(() => {
           if (win && !win.isDestroyed()) {
+            // החזר את הגדרת "תמיד למעלה" המקורית מההגדרות
             win.setAlwaysOnTop(settings.alwaysOnTop);
           }
-        }, 3000); // שחזר אחרי 3 שניות
+        }, 3000); // שחזר את המצב אחרי 3 שניות
       }
     });
   };
 
-  // האזן לאירועי מערכת שיכולים לגרום לחלונות להעלם
   app.on('browser-window-blur', () => {
-    // בדוק אם זה בגלל Snipping Tool
+    // עיכוב קצר כדי לבדוק אם כל החלונות נעלמו (מה שקורה בצילום מסך)
     setTimeout(() => {
       const allWindows = BrowserWindow.getAllWindows();
       const visibleWindows = allWindows.filter(w => w && !w.isDestroyed() && w.isVisible());
       if (visibleWindows.length === 0) {
-        // כל החלונות נעלמו - כנראה בגלל Snipping Tool
-        preventWindowHiding();
+        preventWindowHiding(); // אם כן, הפעל את הפתרון
       }
     }, 100);
   });
 
+  // --- 3. רישום קיצורי דרך והגדרות הפעלה ---
   registerShortcuts();
-if (settings.autoStart) setAutoLaunch(true);
-autoUpdater.autoDownload = false;
-autoUpdater.forceDevUpdateConfig = true; 
+  if (settings.autoStart) {
+    setAutoLaunch(true);
+  }
 
-if (app.isPackaged) {
-  scheduleDailyUpdateCheck();
-}
-
-// If the app was opened with a file, handle it now
-    if (filePathToProcess) {
-        const primaryWindow = BrowserWindow.getAllWindows()[0];
-        if (primaryWindow) {
-            const primaryView = primaryWindow.getBrowserView();
-            if (primaryView) {
-                // We need to wait until the Gemini page is fully loaded
-                primaryView.webContents.once('did-finish-load', () => {
-                    // A small extra delay to ensure all scripts on the page have run
-                    setTimeout(() => {
-                        handleFileOpen(filePathToProcess);
-                    }, 1000);
-                });
-            }
-        }
+  // --- 4. הגדרות מערכת העדכונים האוטומטית ---
+  autoUpdater.autoDownload = false;
+  autoUpdater.forceDevUpdateConfig = true; // טוב לבדיקות, יכול להישאר
+  if (app.isPackaged) {
+  }
+  
+  // --- 5. הפעלת מערכת הנוטיפיקציות מהשרת ---
+  checkForNotifications(); // בצע בדיקה ראשונית אחת מיד עם הפעלת האפליקציה
+  scheduleNotificationCheck();
+  // --- 6. טיפול בפתיחת קובץ דרך "Open With" ---
+  if (filePathToProcess) {
+    const primaryWindow = BrowserWindow.getAllWindows()[0];
+    if (primaryWindow) {
+      const primaryView = primaryWindow.getBrowserView();
+      if (primaryView) {
+        // המתן עד שהתוכן של Gemini ייטען במלואו לפני הדבקת הקובץ
+        primaryView.webContents.once('did-finish-load', () => {
+          setTimeout(() => {
+            handleFileOpen(filePathToProcess);
+          }, 1000);
+        });
+      }
     }
+  }
 });
 
 app.on('will-quit', () => {
@@ -912,7 +999,9 @@ app.on('window-all-closed', () => {
 ipcMain.on('check-for-updates', () => {
   openUpdateWindowAndCheck();
 });
-
+ipcMain.on('manual-check-for-notifications', (event) => {
+  checkForNotifications(event);
+});
 // === Update process management with feedback to the settings window ===
 const sendUpdateStatus = (status, data = {}) => {
   const allWindows = BrowserWindow.getAllWindows();
@@ -1045,7 +1134,6 @@ ipcMain.on('start-download-update', () => {
       height: 180,
       frame: false,
       resizable: false,
-      alwaysOnTop: true,
       parent: parentWindow,
       modal: true,
       webPreferences: {
@@ -1059,6 +1147,11 @@ ipcMain.on('start-download-update', () => {
     });
   }
   autoUpdater.downloadUpdate();
+});
+ipcMain.on('close-notification-window', () => {
+  if (notificationWin) {
+    notificationWin.close();
+  }
 });
 ipcMain.on('close-download-window', () => {
   if (downloadWin) {
@@ -1193,6 +1286,9 @@ ipcMain.on('update-setting', (event, key, value) => {
     }
     if (key === 'autoStart') {
         setAutoLaunch(value);
+    }
+    if (key === 'autoCheckNotifications') {
+    scheduleNotificationCheck(); // עדכן את הטיימר
     }
     if (key.startsWith('shortcuts.')) {
         registerShortcuts(); // This function will now use the updated settings
