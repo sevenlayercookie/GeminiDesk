@@ -1,67 +1,132 @@
-name: Build & (Tag) Release macOS App # שם זרימת העבודה
+name: Build & (Tag) Release Apps
 
 on:
   push:
     branches:
-      - main           # ירוץ על כל push לענף הראשי (main)
+      - main            # runs on every push to main
     tags:
-      - 'v*.*.*'       # בנוסף, ירוץ (ויפרסם) על push של תגיות כמו v1.2.3
+      - 'v*.*.*'        # and on tag pushes like v1.2.3
 
 permissions:
-  contents: write      # הרשאות כתיבה לתוכן הריפוזיטורי (לצורך יצירת ריליס)
-  packages: write      # הרשאות כתיבה לחבילות (לצורך העלאת ארטיפקטים)
+  contents: write      # needed to create/edit releases
+  packages: write      # needed to upload release assets
 
 jobs:
   build-mac:
-    runs-on: macos-latest # זרימת העבודה תרוץ על מכונה וירטואלית של macOS
-
+    runs-on: macos-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3 # שלב: משיכת קוד הריפוזיטורי
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3 # שלב: הגדרת סביבת Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 20 # שימוש בגרסה 20 של Node.js
+          node-version: 20
 
       - name: Install dependencies
-        run: npm ci # שלב: התקנת תלויות הפרויקט
+        run: npm ci
 
-      - name: Build (do not publish directly)
+      - name: Build macOS App
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן ה-GitHub (למקרה ש-electron-builder יצטרך אותו פנימית)
-        run: |
-          # שלב: בניית האפליקציה.
-          # הפקודה '--publish never' מבטיחה ש-electron-builder יבנה את הקבצים
-          # אך לא ינסה לפרסם אותם ישירות ל-GitHub Release.
-          # הקבצים (DMG ו-ZIP) יישארו בתיקיית dist/ לצורך העלאה בשלבים הבאים.
-          npm run build -- --publish never
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build -- --mac --publish never
 
-      - name: Upload macOS DMG Artifact
-        uses: actions/upload-artifact@v4 # שלב: העלאת קובץ ה-DMG כארטיפקט של זרימת העבודה
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
         with:
-          name: GeminiDesk-mac-dmg # שם הארטיפקט
-          path: dist/*.dmg # נתיב הקבצים להעלאה
+          name: GeminiDesk-mac-dmg
+          path: dist/*.dmg
 
-      - name: Create GitHub Release
-        id: cr # מזהה ייחודי לשלב זה, כדי שנוכל להתייחס לפלטים שלו
-        uses: actions/create-release@v1 # שלב: יצירת ריליס חדש ב-GitHub
-        # שלב זה ירוץ רק כאשר ה-push הוא של תגית (לדוגמה: v1.0.0)
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      - name: Upload macOS ZIP
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: ${{ github.ref_name }} # שם התגית ישמש כשם הריליס
-          release_name: Release ${{ github.ref_name }} # שם הריליס שיוצג
+          name: GeminiDesk-mac-zip
+          path: dist/*.zip
+
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows App
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן ה-GitHub ליצירת הריליס
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build -- --win --publish never
 
-      - name: Upload ZIP to Release
-        uses: actions/upload-release-asset@v1 # שלב: העלאת קובץ ה-ZIP כנכס לריליס
-        # שלב זה ירוץ רק כאשר ה-push הוא של תגית
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
         with:
-          upload_url: ${{ steps.cr.outputs.upload_url }} # כתובת ה-URL להעלאה מהשלב הקודם
-          asset_path: dist/*.zip # נתיב קובץ ה-ZIP להעלאה
-          asset_name: GeminiApp-${{ github.ref_name }}.zip # שם הנכס שיוצג בריליס
-          asset_content_type: application/zip # סוג התוכן של הנכס
+          name: GeminiDesk-win-exe
+          path: dist/*.exe
+
+  release:
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download macOS DMG artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: GeminiDesk-mac-dmg
+          path: artifacts/macos
+
+      - name: Download macOS ZIP artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: GeminiDesk-mac-zip
+          path: artifacts/macos
+
+      - name: Download Windows EXE artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: GeminiDesk-win-exe
+          path: artifacts/windows
+
+      - name: Create GitHub Release (draft)
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # שימוש בטוקן ה-GitHub להעלאת הנכס
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS DMG to release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/macos/*.dmg
+          asset_name: GeminiDesk-${{ github.ref_name }}.dmg
+          asset_content_type: application/x-apple-diskimage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS ZIP to release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/macos/*.zip
+          asset_name: GeminiDesk-${{ github.ref_name }}-mac.zip
+          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows EXE to release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/windows/*.exe
+          asset_name: GeminiDesk-${{ github.ref_name }}.exe
+          asset_content_type: application/vnd.microsoft.portable-executable
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
