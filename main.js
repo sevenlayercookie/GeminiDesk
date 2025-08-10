@@ -24,6 +24,29 @@ const autoLauncher = new AutoLaunch({
   path: launcherPath,
   isHidden: true,    // על macOS מוסיף את האפליקציה ל־Login Items בנסתר
 });
+let isUserTogglingHide = false;
+function forceOnTop(win) {
+  if (!win || win.isDestroyed()) return;
+
+  // שמור את מצב alwaysOnTop לפי ההגדרה שלך
+  const shouldBeOnTop = !!settings.alwaysOnTop;
+
+  // ב-Windows מספיק true; ב-macOS אפשר לשלב וורקספייסים
+  if (process.platform === 'darwin') {
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  }
+
+  // העלה לראש, הצג ותן פוקוס גם ל-BrowserView
+  win.setAlwaysOnTop(shouldBeOnTop /*, 'screen-saver' */);
+  win.show();
+  if (typeof win.moveTop === 'function') win.moveTop();
+  win.focus();
+
+  const view = win.getBrowserView();
+  if (view && !view.webContents.isDestroyed()) {
+    view.webContents.focus();
+  }
+}
 
 
 // ================================================================= //
@@ -56,27 +79,17 @@ microphoneGranted: null,
 };
 function scheduleDailyUpdateCheck() {
   const checkForUpdates = () => {
-    const now = new Date().getTime();
-    const oneDay = 24 * 60 * 60 * 1000; // Milliseconds in a day
-    // Check if more than a day has passed since the last check
-    if (!settings.lastUpdateCheck || (now - settings.lastUpdateCheck > oneDay)) {
-      console.log('Checking for updates...');
-      autoUpdater.checkForUpdates();
-      
-      // Update the last check time and save it
-      settings.lastUpdateCheck = now;
-      saveSettings(settings);
-    } else {
-      console.log('Update check skipped, less than 24 hours since last check.');
-    }
+    console.log('Checking for updates...');
+    autoUpdater.checkForUpdates();
   };
 
-  // Check immediately on startup
+  // בדיקה מיד עם ההפעלה
   checkForUpdates();
   
-  // And then check again every 6 hours to see if a day has passed
-  setInterval(checkForUpdates, 6 * 60 * 60 * 1000); 
+  // בדיקה חוזרת כל חצי שעה
+  setInterval(checkForUpdates, 30 * 60 * 1000); // 30 דקות במילישניות
 }
+
 function reloadFocusedView() {
     const focusedWindow = BrowserWindow.getFocusedWindow();
     if (focusedWindow && !focusedWindow.isDestroyed()) {
@@ -406,8 +419,8 @@ function scheduleNotificationCheck() {
 
   // אם המשתמש רוצה בדיקה אוטומטית, הגדר אותה מחדש
   if (settings.autoCheckNotifications) {
-    const oneDayInMs = 24 * 60 * 60 * 1000;
-    notificationIntervalId = setInterval(checkForNotifications, oneDayInMs);
+    const halfHourInMs = 30 * 60 * 1000; 
+    notificationIntervalId = setInterval(checkForNotifications, halfHourInMs);
   }
 }
 function saveSettings(settings) {
@@ -445,57 +458,67 @@ function registerShortcuts() {
     globalShortcut.unregisterAll();
 
 const cfg = settings.shortcuts;
-const hotkeys = {
-  showHide:      isMac ? 'Command+G'            : cfg.showHide,
-  quit:          isMac ? 'Command+Q'            : cfg.quit,
-  showInstructions: isMac ? 'Command+I'         : cfg.showInstructions,
-  screenshot:    isMac ? 'Command+Shift+5'      : cfg.screenshot,
-  newChatPro:    isMac ? 'Command+P'            : cfg.newChatPro,
-  newChatFlash:  isMac ? 'Command+F'            : cfg.newChatFlash,
-  newWindow:     isMac ? 'Command+N'            : cfg.newWindow,
-  search:        isMac ? 'Command+S'            : cfg.search,
-};
-const shortcuts = isMac
-  ? hotkeys
-  : cfg;
+let shortcuts;
+
+if (isMac) {
+    // Start with sensible macOS defaults
+    const macDefaults = {
+        showHide: 'Command+G',
+        quit: 'Command+Q',
+        showInstructions: 'Command+I',
+        screenshot: 'Command+Shift+5',
+        newChatPro: 'Command+P',
+        newChatFlash: 'Command+F',
+        newWindow: 'Command+N',
+        search: 'Command+S',
+    };
+    // Merge user's settings over the defaults. User settings take precedence.
+    shortcuts = { ...macDefaults, ...cfg };
+} else {
+    // For other OS, just use the user's settings
+    shortcuts = cfg;
+}
 
 let lastFocusedWindow = null;
 
 if (shortcuts.showHide) {
-    globalShortcut.register(shortcuts.showHide, () => {
-        const allWindows = BrowserWindow.getAllWindows();
-        if (allWindows.length === 0) return;
+  globalShortcut.register(shortcuts.showHide, () => {
+    const allWindows = BrowserWindow.getAllWindows();
+    if (allWindows.length === 0) return;
 
-        // בדוק אם לפחות חלון אחד גלוי. אם כן, נסתיר את כולם.
-        // אם כולם מוסתרים, נציג את כולם.
-        const shouldShow = allWindows.some(win => !win.isVisible());
+    const shouldShow = allWindows.some(win => !win.isVisible());
 
-        if (!shouldShow) {
-            // לפני הסתרה - שמור את החלון שנמצא כרגע בפוקוס
-            lastFocusedWindow = allWindows.find(w => w.isFocused()) || allWindows[0];
-        }
+    if (!shouldShow) {
+      // אנחנו בדרך להסתיר – סימון כדי שמאזיני blur לא “יריםו” חזרה
+      isUserTogglingHide = true;
+      setTimeout(() => { isUserTogglingHide = false; }, 500);
+    }
 
-        allWindows.forEach(win => {
-            if (shouldShow) {
-                if (win.isMinimized()) win.restore();
-                win.show();
-            } else {
-                win.hide();
-            }
-        });
-
-        // לאחר שהצגנו את כל החלונות, נחזיר את הפוקוס לחלון האחרון שהיה פעיל
-        if (shouldShow && lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
-            setTimeout(() => {
-                lastFocusedWindow.focus();
-                const view = lastFocusedWindow.getBrowserView();
-                if (view && view.webContents && !view.webContents.isDestroyed()) {
-                    view.webContents.focus();
-                }
-            }, 150);
-        }
+    allWindows.forEach(win => {
+      if (shouldShow) {
+        if (win.isMinimized()) win.restore();
+        win.show();
+      } else {
+        win.hide();
+      }
     });
+
+    // אם מציגים – תן בוסט ל-topmost והחזר פוקוס
+    if (shouldShow) {
+      const lastFocusedWindow = allWindows.find(w => w.isFocused()) || allWindows[0];
+      if (lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
+        setTimeout(() => {
+          forceOnTop(lastFocusedWindow);
+          const view = lastFocusedWindow.getBrowserView();
+          if (view && view.webContents && !view.webContents.isDestroyed()) {
+            view.webContents.focus();
+          }
+        }, 100);
+      }
+    }
+  });
 }
+
 
     if (shortcuts.newChatPro) {
         globalShortcut.register(shortcuts.newChatPro, () => createNewChatWithModel('Pro'));
@@ -655,28 +678,44 @@ function proceedWithScreenshot() {
     }
 }
 function createWindow() {
-  const newWin = new BrowserWindow({
-    width: originalSize.width,
-    height: originalSize.height,
-    frame: false,
-    alwaysOnTop: settings.alwaysOnTop,
-    icon: path.join(__dirname, 'icon.ico'),
-    show: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      partition: 'persist:gemini-session'
-    }
-  });
+const newWin = new BrowserWindow({
+  width: originalSize.width,
+  height: originalSize.height,
+  skipTaskbar: true,
+  frame: false,
+  alwaysOnTop: settings.alwaysOnTop,
+  // הוסף את שלושת השורות הבאות:
+  fullscreenable: false,   // שלא ייכנס לפול־סקרין או יתחרבש מול פול־סקרין אחר
+  focusable: true,         // ודא שניתן לקבל פוקוס
+  icon: path.join(__dirname, 'icon.ico'),
+  show: true,
+  webPreferences: {
+    preload: path.join(__dirname, 'preload.js'),
+    contextIsolation: true,
+    partition: 'persist:gemini-session'
+  }
+});
 
+if (settings.alwaysOnTop) {
+  // גם ב-Windows וגם ב-macOS זה עובד טוב:
+  newWin.setAlwaysOnTop(true, 'screen-saver');
+
+  // ב-macOS כדי לראות גם בזמן פול־סקרין של אפליקציות אחרות:
+  if (process.platform === 'darwin') {
+    newWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  }
+}
   // Attach custom properties for canvas mode state
   newWin.isCanvasActive = false;
   newWin.prevBounds = null;
+newWin.on('blur', () => {
+  if (isUserTogglingHide) return; // אל תתערב בזמן הסתרה מכוונת
+  if (settings.alwaysOnTop) {
+    setTimeout(() => forceOnTop(newWin), 0);
+  }
+});
 
-  newWin.on('blur', () => {
-    if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
-  });
-  
+
 newWin.on('focus', () => {
     if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
 
@@ -966,7 +1005,7 @@ ipcMain.on('toggle-full-screen', (event) => {
         if (win.isMaximized()) {
             win.unmaximize();
             // החזר את מצב "תמיד למעלה" המקורי מההגדרות
-            win.setAlwaysOnTop(settings.alwaysOnTop);
+            win.setAlwaysOnTop(settings.alwaysOnTop, 'screen-saver');
             win.focus(); // ודא שהחלון נשאר בפוקוס
         } else {
             // כבה זמנית את "תמיד למעלה" לפני ההגדלה
@@ -1041,23 +1080,24 @@ sendPing();
         setTimeout(() => {
           if (win && !win.isDestroyed()) {
             // החזר את הגדרת "תמיד למעלה" המקורית מההגדרות
-            win.setAlwaysOnTop(settings.alwaysOnTop);
+            win.setAlwaysOnTop(settings.alwaysOnTop, 'screen-saver');
           }
         }, 3000); // שחזר את המצב אחרי 3 שניות
       }
     });
   };
 
-  app.on('browser-window-blur', () => {
-    // עיכוב קצר כדי לבדוק אם כל החלונות נעלמו (מה שקורה בצילום מסך)
-    setTimeout(() => {
-      const allWindows = BrowserWindow.getAllWindows();
-      const visibleWindows = allWindows.filter(w => w && !w.isDestroyed() && w.isVisible());
-      if (visibleWindows.length === 0) {
-        preventWindowHiding(); // אם כן, הפעל את הפתרון
-      }
-    }, 100);
-  });
+app.on('browser-window-blur', () => {
+  setTimeout(() => {
+    if (isUserTogglingHide) return; // אל תרים בחזרה כשאנחנו מסתירים בכוונה
+    const allWindows = BrowserWindow.getAllWindows();
+    const visibleWindows = allWindows.filter(w => w && !w.isDestroyed() && w.isVisible());
+    if (visibleWindows.length === 0) {
+      preventWindowHiding();
+    }
+  }, 100);
+});
+
 
   // --- 3. רישום קיצורי דרך והגדרות הפעלה ---
   registerShortcuts();
