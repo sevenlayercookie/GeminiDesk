@@ -13,6 +13,12 @@ let downloadWin = null;
 let notificationWin = null;
 let lastFetchedMessageId = null;
 const execPath = process.execPath;
+// Allow third-party/partitioned cookies used by Google Sign-In
+app.commandLine.appendSwitch('enable-features', 'ThirdPartyStoragePartitioning');
+
+// Avoid aggressive SameSite defaults that can drop cookies on restart
+app.commandLine.appendSwitch('disable-features', 'SameSiteByDefaultCookies,CookiesWithoutSameSiteMustBeSecure');
+const SESSION_PARTITION = 'persist:gemini-session';
 
 const isMac = process.platform === 'darwin';
 const launcherPath = isMac
@@ -696,7 +702,7 @@ const newWin = new BrowserWindow({
   webPreferences: {
     preload: path.join(__dirname, 'preload.js'),
     contextIsolation: true,
-    partition: 'persist:gemini-session'
+    partition: SESSION_PARTITION
   }
 });
 
@@ -760,7 +766,7 @@ function loadGemini(targetWin) {
 
   const newView = new BrowserView({
       webPreferences: {
-        partition: 'persist:gemini-session',
+        partition: SESSION_PARTITION,
         preload: path.join(__dirname, 'preload.js'),
         contextIsolation: true,
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
@@ -1093,6 +1099,12 @@ ipcMain.on('theme:set', (event, newTheme) => {
 app.whenReady().then(() => {
   syncThemeWithWebsite(settings.theme);
   createWindow();
+  const gemSession = session.fromPartition(SESSION_PARTITION);
+
+// Optional: keep UA consistent on the session (not per-view)
+gemSession.setUserAgent(
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+);
 const sendPing = async () => {
     try {
         await fetch('https://latex-r70v.onrender.com/ping-stats', { // ודא שזו כתובת ה-worker שלך
