@@ -720,14 +720,6 @@ if (settings.alwaysOnTop) {
       newWin.webContents.send('theme-updated', themeToSend);
   });
 
-newWin.on('blur', () => {
-  if (isUserTogglingHide) return; // אל תתערב בזמן הסתרה מכוונת
-  if (settings.alwaysOnTop) {
-    setTimeout(() => forceOnTop(newWin), 0);
-  }
-});
-
-
 newWin.on('focus', () => {
     if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
 
@@ -1135,18 +1127,6 @@ sendPing();
       }
     });
   };
-
-app.on('browser-window-blur', () => {
-  setTimeout(() => {
-    if (isUserTogglingHide) return; // אל תרים בחזרה כשאנחנו מסתירים בכוונה
-    const allWindows = BrowserWindow.getAllWindows();
-    const visibleWindows = allWindows.filter(w => w && !w.isDestroyed() && w.isVisible());
-    if (visibleWindows.length === 0) {
-      preventWindowHiding();
-    }
-  }, 100);
-});
-
 
   // --- 3. רישום קיצורי דרך והגדרות הפעלה ---
   registerShortcuts();
