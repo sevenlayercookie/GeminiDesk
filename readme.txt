@@ -5,7 +5,7 @@
 <h1 align="center">GeminiDesk</h1>
 
 <p align="center">
-  <strong>A powerful, sleek, and feature-rich desktop client for Google's Gemini.</strong>
+  <strong>A powerful, sleek, and feature-rich desk top client for Google's Gemini.</strong>
   <br />
   Designed for productivity and seamless integration with your workflow.
 </p>
