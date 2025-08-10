@@ -1,12 +1,12 @@
 {
-  "name": "gemini-app",
+  "name": "gemini-desk",
   "version": "5.0.0",
   "description": "Gemini Desktop Wrapper",
   "author": "Hillel BH",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --publish always"
+    "build": "electron-builder"
   },
   "devDependencies": {
     "electron": "^28.2.0",
@@ -19,25 +19,10 @@
   },
   "build": {
     "appId": "com.hillel.geminiapp",
-    "productName": "GeminiApp",
-    "artifactName": "${productName}-Setup-${version}.${ext}",
-    "icon": "icon1.png",
+    "productName": "GeminiDesk",
     "asar": true,
     "compression": "maximum",
-    "files": [
-      "main.js",
-      "onboarding.html",
-      "preload.js",
-      "drag.html",
-      "settings.html",
-      "confirm-reset.html",
-      "update-available.html",
-      "download-progress.html",
-      "icon1.png",
-      "notification.html",
-      "node_modules/auto-launch",
-      "package.json"
-    ],
+
     "publish": [
       {
         "provider": "github",
@@ -45,36 +30,25 @@
         "repo": "GeminiDesk"
       }
     ],
+
     "mac": {
-  "target": ["dmg", "zip"],
-  "artifactName": "${productName}-${version}-${arch}.${ext}"
-},
-"dmg": {
-  "background": null,
-  "format": "UDZO",
-  "title": "${productName}-${version}-${arch}",
-  "window": {
-    "width": 600,
-    "height": 400
-  },
-  "contents": [
-    {
-      "x": 130,
-      "y": 220
+      "target": ["dmg", "zip"],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
-    {
-      "x": 410,
-      "y": 220,
-      "type": "link",
-      "path": "/Applications"
-    }
-  ]
-},
+    "dmg": {
+      "background": null,
+      "format": "UDZO",
+      "title": "${productName}-${version}-${arch}",
+      "window": { "width": 600, "height": 400 },
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
 
     "win": {
-      "target": [
-        "nsis"
-      ],
+      "target": ["nsis"],
+      "artifactName": "${productName}-Setup-${version}.${ext}",
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
@@ -86,12 +60,13 @@
       "include": "installer.nsh",
       "license": "build/EULA.txt"
     },
+
     "linux": {
-      "target": [
-        "AppImage"
-      ],
+      "target": ["AppImage"],
       "category": "Utility",
       "icon": "icon1.png"
-    }
+    },
+
+    "icon": "icon1.png"
   }
 }
