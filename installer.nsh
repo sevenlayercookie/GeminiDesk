@@ -6,6 +6,6 @@
 !macroend
 
 !macro customUninstall
-  ; הסרה נקייה בעת uninstall
+  ; הסרה נייה בעת uninstall
   DeleteRegKey HKCR "*\shell\GeminiApp"
 !macroend
