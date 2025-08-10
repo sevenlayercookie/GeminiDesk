@@ -1,9 +1,9 @@
-name: Build & Release (always draft with all assets)
+name: Build & Release (random draft name)
 
 on:
   push:
     branches: [ main ]
-    tags:     [ 'v*.*.*' ]   # גם בטאגים, אבל תמיד ניצור דרפט חדש משלנו
+    tags:     [ 'v*.*.*' ]
 
 permissions:
   contents: write
@@ -27,10 +27,9 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # --publish always מייצר גם latest*.yml ו-*.blockmap בתוך dist/
-      # שים לב: בלי GH_TOKEN כדי למנוע פרסום אוטומטי ל-GitHub
+      # --publish never כדי לא לפרסם, אבל עדיין יווצרו קבצי ה-updater
       - name: Build macOS (DMG + ZIP + updater files)
-        run: npm run build -- --mac --publish always
+        run: npm run build -- --mac --publish never
 
       - name: Upload mac artifacts
         uses: actions/upload-artifact@v4
@@ -58,9 +57,8 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      # --publish always כדי לייצר latest.yml ו-blockmap
       - name: Build Windows (EXE + updater files)
-        run: npm run build -- --win --publish always
+        run: npm run build -- --win --publish never
 
       - name: Upload win artifacts
         uses: actions/upload-artifact@v4
@@ -88,12 +86,11 @@ jobs:
           name: win
           path: rel/windows
 
-      # יוצר תמיד טאג חדש ו-Release Draft חדש עם שם שמתחיל ב-geminidesk-
-      - name: Create draft release & upload ALL files
+      # יצירת דרפט עם שם רנדומלי geminidesk-<run id>
+      - name: Create draft release & upload all files
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          # שם דרפט/ריליס שמתחיל ב-geminidesk- ומזהה ריצה כדי שיהיה רנדומלי וייחודי
           name: geminidesk-${{ github.run_id }}-${{ github.run_attempt }}
           tag_name: geminidesk-${{ github.run_id }}-${{ github.run_attempt }}
           files: |
