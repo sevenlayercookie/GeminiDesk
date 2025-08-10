@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, dialog, screen, shell, session } = require('electron');
+const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, dialog, screen, shell, session, nativeTheme } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const AutoLaunch = require('auto-launch');
 const path = require('path');
@@ -75,12 +75,16 @@ const defaultSettings = {
   },
 lastUpdateCheck: 0,
 microphoneGranted: null,
-  theme: 'dark'
+  theme: 'system'
 };
 function scheduleDailyUpdateCheck() {
-  const checkForUpdates = () => {
+  const checkForUpdates = async () => {
     console.log('Checking for updates...');
-    autoUpdater.checkForUpdates();
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (error) {
+      console.error('Background update check failed. This is not critical and will be ignored:', error.message);
+    }
   };
 
   // בדיקה מיד עם ההפעלה
@@ -708,6 +712,14 @@ if (settings.alwaysOnTop) {
   // Attach custom properties for canvas mode state
   newWin.isCanvasActive = false;
   newWin.prevBounds = null;
+
+  newWin.webContents.on('did-finish-load', () => {
+      const themeToSend = settings.theme === 'system' 
+          ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') 
+          : settings.theme;
+      newWin.webContents.send('theme-updated', themeToSend);
+  });
+
 newWin.on('blur', () => {
   if (isUserTogglingHide) return; // אל תתערב בזמן הסתרה מכוונת
   if (settings.alwaysOnTop) {
@@ -1039,6 +1051,43 @@ async function reportErrorToServer(error) {
     }
 }
 // ================================================================= //
+// Theme Management
+// ================================================================= //
+
+function broadcastThemeChange(newTheme) {
+    const themeToSend = newTheme === 'system' 
+        ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') 
+        : newTheme;
+    
+    BrowserWindow.getAllWindows().forEach(win => {
+        if (win && !win.isDestroyed()) {
+            win.webContents.send('theme-updated', themeToSend);
+        }
+    });
+}
+
+nativeTheme.on('updated', () => {
+    if (settings.theme === 'system') {
+        broadcastThemeChange('system');
+    }
+});
+
+ipcMain.handle('theme:get-resolved', () => {
+    const theme = settings.theme;
+    return theme === 'system' ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') : theme;
+});
+
+ipcMain.handle('theme:get-setting', () => {
+    return settings.theme;
+});
+
+ipcMain.on('theme:set', (event, newTheme) => {
+    settings.theme = newTheme;
+    saveSettings(settings);
+    broadcastThemeChange(newTheme);
+});
+
+// ================================================================= //
 // App Lifecycle
 // ================================================================= //
 
@@ -1173,12 +1222,22 @@ function openUpdateWindowAndCheck() {
 
     updateWin.loadFile('update-available.html');
 
-    updateWin.once('ready-to-show', () => {
+    updateWin.once('ready-to-show', async () => {
         updateWin.show();
         // שלב 1: שלח לחלון הודעה שאנחנו מתחילים לבדוק
         updateWin.webContents.send('update-info', { status: 'checking' });
-        // שלב 2: רק עכשיו, התחל את תהליך הבדיקה ברקע
-        autoUpdater.checkForUpdates();
+        try {
+            // שלב 2: רק עכשיו, התחל את תהליך הבדיקה ברקע
+            await autoUpdater.checkForUpdates();
+        } catch (error) {
+            console.error('Manual update check failed:', error.message);
+            if (updateWin && !updateWin.isDestroyed()) {
+                updateWin.webContents.send('update-info', { 
+                    status: 'error', 
+                    message: 'Could not connect to GitHub to check for updates. Please check your internet connection or try again later. You can also check for new releases manually on the GitHub page.' 
+                });
+            }
+        }
     });
 
     updateWin.on('closed', () => {

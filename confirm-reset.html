@@ -6,6 +6,17 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
         :root{--bg-primary:#1e1e1e;--text-primary:#cccccc;--text-secondary:#9e9e9e;--accent-primary:#0e98d9;--danger-color:#f44336;--danger-hover-bg:#dc3545}
+
+        html.light-mode {
+            --bg-primary: #ffffff;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --danger-color: #d32f2f;
+            --danger-hover-bg: #c62828;
+        }
+
+        html.light-mode #cancel-btn { background-color: #e0e0e0; color: #212121; }
+        html.light-mode #cancel-btn:hover { background-color: #dcdcdc; }
         html, body {
             margin: 0; padding: 0; background-color: var(--bg-primary);
             color: var(--text-primary); font-family: 'Poppins', sans-serif;
@@ -50,6 +61,21 @@
 <script>
     document.getElementById('cancel-btn').addEventListener('click', () => window.electronAPI.cancelReset());
     document.getElementById('confirm-btn').addEventListener('click', () => window.electronAPI.confirmReset());
+</script>
+<script>
+// --- Theme Application Logic ---
+function applyTheme(theme) {
+    if (theme === 'light') {
+        document.documentElement.classList.add('light-mode');
+    } else {
+        document.documentElement.classList.remove('light-mode');
+    }
+}
+
+if (window.electronAPI) {
+    window.electronAPI.theme.getResolved().then(applyTheme);
+    window.electronAPI.theme.onUpdate(applyTheme);
+}
 </script>
 </body>
 </html>

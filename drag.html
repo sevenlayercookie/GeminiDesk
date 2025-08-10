@@ -18,6 +18,15 @@
             --tooltip-background: #333333;
         }
 
+        html.light-mode {
+            --background-primary: #ffffff;
+            --background-secondary: #f5f5f5;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --accent-glow: #007aff;
+            --tooltip-background: #ffffff;
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -228,6 +237,21 @@
             }
         });
     }
+</script>
+<script>
+// --- Theme Application Logic ---
+function applyTheme(theme) {
+    if (theme === 'light') {
+        document.documentElement.classList.add('light-mode');
+    } else {
+        document.documentElement.classList.remove('light-mode');
+    }
+}
+
+if (window.electronAPI) {
+    window.electronAPI.theme.getResolved().then(applyTheme);
+    window.electronAPI.theme.onUpdate(applyTheme);
+}
 </script>
 
 </body>

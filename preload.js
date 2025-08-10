@@ -2,6 +2,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  theme: {
+    getResolved: () => ipcRenderer.invoke('theme:get-resolved'),
+    getSetting: () => ipcRenderer.invoke('theme:get-setting'),
+    set: (theme) => ipcRenderer.send('theme:set', theme),
+    onUpdate: (callback) => ipcRenderer.on('theme-updated', (_event, theme) => callback(theme)),
+  },
   toggleFullScreen: () => ipcRenderer.send('toggle-full-screen'), // <--- הוסף שורה זו
   completeOnboarding: () => ipcRenderer.send('onboarding-complete'),
   getSettings: () => ipcRenderer.invoke('get-settings'),

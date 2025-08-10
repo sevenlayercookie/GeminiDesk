@@ -29,6 +29,25 @@
             --mouse-y: 0.5;
         }
 
+        html.light-mode {
+            --bg-primary: #f0f2f5;
+            --text-primary: #1d1d1f;
+            --text-secondary: #6e6e73;
+            
+            --glass-bg: rgba(255, 255, 255, 0.5);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --glass-border-glow: rgba(0, 0, 0, 0.1);
+
+            --glow-primary: #007aff;
+            --glow-secondary: #34c759;
+            --glow-tertiary: #ff9500;
+            
+            --success-color: #34c759;
+            --success-glow: rgba(52, 199, 89, 0.4);
+            --danger-color: #ff3b30;
+            --danger-glow: rgba(255, 59, 48, 0.4);
+        }
+
         *, *::before, *::after { box-sizing: border-box; }
 
         html, body {
@@ -387,6 +406,21 @@
             document.documentElement.style.setProperty('--mouse-y', y);
         });
     });
+</script>
+<script>
+// --- Theme Application Logic ---
+function applyTheme(theme) {
+    if (theme === 'light') {
+        document.documentElement.classList.add('light-mode');
+    } else {
+        document.documentElement.classList.remove('light-mode');
+    }
+}
+
+if (window.electronAPI) {
+    window.electronAPI.theme.getResolved().then(applyTheme);
+    window.electronAPI.theme.onUpdate(applyTheme);
+}
 </script>
 </body>
 </html>

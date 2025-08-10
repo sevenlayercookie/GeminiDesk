@@ -26,6 +26,21 @@
             font-size: calc(10px + 0.5vw); 
         }
 
+        html.light-mode {
+            --bg-primary: #f0f2f5;
+            --text-primary: #1d1d1f;
+            --text-secondary: #6e6e73;
+            --accent-glow: rgba(0, 122, 255, 0.4);
+            --glass-bg: rgba(255, 255, 255, 0.6);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --key-bg: #e9e9eb;
+            --key-border: #d1d1d6;
+            --aurora-1: #007aff;
+            --aurora-2: #5856d6;
+            --aurora-3: #34c759;
+            --tooltip-background: #ffffff;
+        }
+
         html, body {
             margin: 0;
             padding: 0;
@@ -491,6 +506,21 @@ const syncShortcuts = (settings) => {
         isMac ? el.dataset.mac : el.dataset.win;
     });
   });
+</script>
+<script>
+// --- Theme Application Logic ---
+function applyTheme(theme) {
+    if (theme === 'light') {
+        document.documentElement.classList.add('light-mode');
+    } else {
+        document.documentElement.classList.remove('light-mode');
+    }
+}
+
+if (window.electronAPI) {
+    window.electronAPI.theme.getResolved().then(applyTheme);
+    window.electronAPI.theme.onUpdate(applyTheme);
+}
 </script>
 
 </body>
