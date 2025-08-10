@@ -21,6 +21,7 @@
     <img src="https://img.shields.io/github/issues/hillelkingqt/GeminiDesk?style=for-the-badge&logo=github&color=81c995" alt="Issues">
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows" alt="Platform: Windows">
+  <img src="https://img.shields.io/badge/platform-macOS-lightgrey?style=for-the-badge&logo=apple" alt="Platform: macOS">
 </p>
 
 <p align="center">
@@ -47,6 +48,18 @@ GeminiDesk is more than a wrapper. It's a command center, loaded with features t
 
 * **✨ Multi-Window Mania**
     Who said you can only have one conversation at a time? Open multiple windows and conquer multiple topics simultaneously. It’s organized chaos at its finest.
+
+* **🎨 Your App, Your Style: Full Theme Control**
+    Choose between a sleek **Dark** mode, a clean **Light** mode, or let the app **sync with your OS**. Your eyes will thank you.
+
+* **🖼️ Expand Your Mind with Canvas Mode**
+    Need more space? Activate Canvas Mode to instantly expand the window to a larger, more comfortable size, perfect for deep dives and extensive conversations.
+
+* **🔔 Stay in the Know with System Notifications**
+    Receive important announcements and updates directly through a clean, native notification system. No more checking GitHub for news.
+
+* **🤝 "Open With" Integration**
+    Set GeminiDesk as the default application for images or text files. Opening a file with the app will instantly load it into the chat, ready for action.
 
 * **📌 Always-On-Top Mode: Your Unwavering AI Companion**
     Keep Gemini watching over your shoulder (in a non-creepy way) while you work. Perfect for coding, writing, or just feeling less alone in the universe.
@@ -77,8 +90,11 @@ Access the magic from anywhere in your OS. (Remember, you can change ALL of thes
 | `Control` + `Alt` + `S`       | **Capture Screenshot** & Paste into Chat    |
 | `Alt` + `P`                   | New Chat with **Pro** Model                 |
 | `Alt` + `F`                   | New Chat with **Flash** Model               |
+| `Alt` + `R`                   | **Refresh the active View**                 |
 | `Alt` + `I`                   | Show Instructions / Onboarding Screen       |
 | `Alt` + `Q`                   | Quit Application (The "I'm Done" Button)    |
+
+*On macOS, `Alt` is generally replaced by `Command` (e.g., `Command+G`).*
 
 ---
 
@@ -87,8 +103,12 @@ Access the magic from anywhere in your OS. (Remember, you can change ALL of thes
 Getting this slab of awesome onto your machine is laughably simple.
 
 1.  Brave the digital seas and navigate to the [**Latest Release**](https://github.com/hillelkingqt/GeminiDesk/releases/latest) page.
-2.  Snag the `GeminiApp-Setup-x.x.x.exe` file. It won't bite.
-3.  Run the installer. Follow the on-screen instructions. Click 'Next' like you mean it.
+2.  Download the correct file for your operating system:
+    *   **Windows:** Grab the `...Setup-x.x.x.exe` file.
+    *   **macOS:** Snag the `.dmg` file.
+3.  Follow the standard installation procedure for your OS:
+    *   **Windows:** Run the installer. Click 'Next' like you mean it.
+    *   **macOS:** Open the `.dmg` and drag the GeminiDesk icon into your Applications folder.
 
 That's it! GeminiDesk is now a permanent resident on your desktop. Treat it well.
 
