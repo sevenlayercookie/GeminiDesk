@@ -1058,6 +1058,12 @@ function broadcastThemeChange(newTheme) {
     });
 }
 
+function syncThemeWithWebsite(theme) {
+    if (['light', 'dark', 'system'].includes(theme)) {
+        nativeTheme.themeSource = theme;
+    }
+}
+
 nativeTheme.on('updated', () => {
     if (settings.theme === 'system') {
         broadcastThemeChange('system');
@@ -1077,6 +1083,7 @@ ipcMain.on('theme:set', (event, newTheme) => {
     settings.theme = newTheme;
     saveSettings(settings);
     broadcastThemeChange(newTheme);
+    syncThemeWithWebsite(newTheme);
 });
 
 // ================================================================= //
@@ -1084,6 +1091,7 @@ ipcMain.on('theme:set', (event, newTheme) => {
 // ================================================================= //
 
 app.whenReady().then(() => {
+  syncThemeWithWebsite(settings.theme);
   createWindow();
 const sendPing = async () => {
     try {
