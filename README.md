@@ -2,12 +2,12 @@
   <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/icon.ico" alt="GeminiDesk Logo" width="150">
 </p>
 
-<h1 align="center">🚀 GeminiDesk 🚀</h1>
+<h1 align="center">🚀 GeminiDesk - The Unofficial Gemini Desktop App 🚀</h1>
 
 <p align="center">
-  <strong>Tired of Gemini being just another browser tab? So were we.</strong>
+  <strong>Is Google Gemini just another browser tab in your sea of tabs? We fixed that.</strong>
   <br />
-  We've liberated Google's AI from its browser cage and turned it into a sleek, powerful, and slightly mischievous desktop powerhouse.
+  GeminiDesk liberates the brilliant Google Gemini AI, giving it a proper home on your desktop. This is the native, feature-packed Gemini desktop app you've been searching for.
 </p>
 
 <p align="center">
@@ -103,14 +103,28 @@ Access the magic from anywhere in your OS. (Remember, you can change ALL of thes
 Getting this slab of awesome onto your machine is laughably simple.
 
 1.  Brave the digital seas and navigate to the [**Latest Release**](https://github.com/hillelkingqt/GeminiDesk/releases/latest) page.
-2.  Download the correct file for your operating system:
-    *   **Windows:** Grab the `...Setup-x.x.x.exe` file.
-    *   **macOS:** Snag the `.dmg` file.
-3.  Follow the standard installation procedure for your OS:
-    *   **Windows:** Run the installer. Click 'Next' like you mean it.
-    *   **macOS:** Open the `.dmg` and drag the GeminiDesk icon into your Applications folder.
+2.  Download the correct installer for your operating system (`.exe` for Windows, `.dmg` for macOS).
+3.  Run the installer and follow the on-screen prompts. Click 'Next' like you mean it.
 
-That's it! GeminiDesk is now a permanent resident on your desktop. Treat it well.
+That's it! The Gemini Desk App is now ready for action.
+
+---
+
+### ⚠️ A Note for macOS Heroes ⚠️
+
+Due to Apple's Gatekeeper security, apps not signed with a pricey Apple Developer ID get marked as "quarantined" when downloaded. This can cause a scary (but false) error message: “GeminiDesk is damaged and can’t be opened.”
+
+**Fear not! Here’s the simple spell to fix it:**
+
+1.  After installing, **do not launch the app yet**.
+2.  Open your `Terminal` app (you can find it via Spotlight search).
+3.  Paste and run this command. It removes the quarantine flag, telling macOS to trust the app:
+    ```sh
+    xattr -dr com.apple.quarantine /Applications/GeminiDesk.app
+    ```
+4.  Now, launch the app normally from Launchpad or your Applications folder.
+
+This one-time step is all it takes to get the best Gemini desktop app running smoothly on your Mac.
 
 ---
 
