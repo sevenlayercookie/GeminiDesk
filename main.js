@@ -12,12 +12,11 @@ let updateWin = null;
 let downloadWin = null;
 let notificationWin = null;
 let lastFetchedMessageId = null;
+
 const execPath = process.execPath;
 // Allow third-party/partitioned cookies used by Google Sign-In
 app.commandLine.appendSwitch('enable-features', 'ThirdPartyStoragePartitioning');
 
-// Avoid aggressive SameSite defaults that can drop cookies on restart
-app.commandLine.appendSwitch('disable-features', 'SameSiteByDefaultCookies,CookiesWithoutSameSiteMustBeSecure');
 const SESSION_PARTITION = 'persist:gemini-session';
 
 const isMac = process.platform === 'darwin';
@@ -60,30 +59,6 @@ function forceOnTop(win) {
 // ================================================================= //
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settingsWin = null;
-const defaultShortcuts = isMac
-  ? {
-      showHide: 'Command+G',
-      quit: 'Command+Q',
-      showInstructions: 'Command+I',
-      screenshot: 'Command+Shift+5',
-      newChatPro: 'Command+P',
-      newChatFlash: 'Command+F',
-      newWindow: 'Command+N',
-      search: 'Command+S',
-      refresh: 'Command+R'
-    }
-  : {
-      showHide: 'Alt+G',
-      quit: 'Alt+Q',
-      showInstructions: 'Alt+I',
-      screenshot: 'Control+Alt+S',
-      newChatPro: 'Alt+P',
-      newChatFlash: 'Alt+F',
-      newWindow: 'Alt+N',
-      search: 'Alt+S',
-      refresh: 'Alt+R'
-    };
-
 const defaultSettings = {
   onboardingShown: false,
   autoStart: false,
@@ -92,9 +67,19 @@ const defaultSettings = {
   lastMessageData: null,
   autoCheckNotifications: true,
   enableCanvasResizing: true,
-  shortcuts: defaultShortcuts,
-  lastUpdateCheck: 0,
-  microphoneGranted: null,
+  shortcuts: {
+    showHide: isMac ? 'Command+G' : 'Alt+G', // ← דוגמה לתיקון
+    quit: isMac ? 'Command+Q' : 'Alt+Q',
+    showInstructions: isMac ? 'Command+I' : 'Alt+I',
+    screenshot: isMac ? 'Command+Alt+S' : 'Control+Alt+S', // אין מקביל מדויק ב-Mac, עדיף להשאיר ל-Mac
+    newChatPro: isMac ? 'Command+P' : 'Alt+P',
+    newChatFlash: isMac ? 'Command+F' : 'Alt+F',
+    newWindow: isMac ? 'Command+N' : 'Alt+N',
+    search: isMac ? 'Command+S' : 'Alt+S',
+    refresh: isMac ? 'Command+R' : 'Alt+R'
+  },
+lastUpdateCheck: 0,
+microphoneGranted: null,
   theme: 'system'
 };
 function scheduleDailyUpdateCheck() {
