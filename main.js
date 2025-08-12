@@ -60,6 +60,30 @@ function forceOnTop(win) {
 // ================================================================= //
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settingsWin = null;
+const defaultShortcuts = isMac
+  ? {
+      showHide: 'Command+G',
+      quit: 'Command+Q',
+      showInstructions: 'Command+I',
+      screenshot: 'Command+Shift+5',
+      newChatPro: 'Command+P',
+      newChatFlash: 'Command+F',
+      newWindow: 'Command+N',
+      search: 'Command+S',
+      refresh: 'Command+R'
+    }
+  : {
+      showHide: 'Alt+G',
+      quit: 'Alt+Q',
+      showInstructions: 'Alt+I',
+      screenshot: 'Control+Alt+S',
+      newChatPro: 'Alt+P',
+      newChatFlash: 'Alt+F',
+      newWindow: 'Alt+N',
+      search: 'Alt+S',
+      refresh: 'Alt+R'
+    };
+
 const defaultSettings = {
   onboardingShown: false,
   autoStart: false,
@@ -68,19 +92,9 @@ const defaultSettings = {
   lastMessageData: null,
   autoCheckNotifications: true,
   enableCanvasResizing: true,
-  shortcuts: {
-    showHide: 'Alt+G',
-    quit: 'Alt+Q',
-    showInstructions: 'Alt+I',
-    screenshot: 'Control+Alt+S',
-    newChatPro: 'Alt+P',
-    newChatFlash: 'Alt+F',
-    newWindow: 'Alt+N',
-    search: 'Alt+S',
-    refresh: 'Alt+R'
-  },
-lastUpdateCheck: 0,
-microphoneGranted: null,
+  shortcuts: defaultShortcuts,
+  lastUpdateCheck: 0,
+  microphoneGranted: null,
   theme: 'system'
 };
 function scheduleDailyUpdateCheck() {
@@ -467,27 +481,8 @@ function registerShortcuts() {
     // Unregister all shortcuts before registering new ones to avoid conflicts
     globalShortcut.unregisterAll();
 
-const cfg = settings.shortcuts;
-let shortcuts;
+    const shortcuts = settings.shortcuts;
 
-if (isMac) {
-    // Start with sensible macOS defaults
-    const macDefaults = {
-        showHide: 'Command+G',
-        quit: 'Command+Q',
-        showInstructions: 'Command+I',
-        screenshot: 'Command+Shift+5',
-        newChatPro: 'Command+P',
-        newChatFlash: 'Command+F',
-        newWindow: 'Command+N',
-        search: 'Command+S',
-    };
-    // Merge user's settings over the defaults. User settings take precedence.
-    shortcuts = { ...macDefaults, ...cfg };
-} else {
-    // For other OS, just use the user's settings
-    shortcuts = cfg;
-}
 
 let lastFocusedWindow = null;
 
