@@ -499,7 +499,7 @@ function registerShortcuts() {
                 } else if (!lastFocusedWindow || lastFocusedWindow.isDestroyed()) {
                     lastFocusedWindow = allWindows[0];
                 }
-
+                
                 if (lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
                     setTimeout(() => {
                         forceOnTop(lastFocusedWindow);
@@ -526,12 +526,25 @@ function registerShortcuts() {
             }
         }
         // Tell renderer to clear any local shortcuts
-        broadcastToWindows('set-local-shortcuts', {});
+broadcastToAllWebContents('set-local-shortcuts', {});
     } else {
         console.log('Registering LOCAL shortcuts.');
         // Tell renderer to set local shortcuts
-        broadcastToWindows('set-local-shortcuts', localShortcuts);
+broadcastToAllWebContents('set-local-shortcuts', localShortcuts);
     }
+}
+function broadcastToAllWebContents(channel, data) {
+  BrowserWindow.getAllWindows().forEach(win => {
+    if (!win || win.isDestroyed()) return;
+
+    if (win.webContents && !win.webContents.isDestroyed()) {
+      win.webContents.send(channel, data);
+    }
+    const view = win.getBrowserView();
+    if (view && view.webContents && !view.webContents.isDestroyed()) {
+      view.webContents.send(channel, data);
+    }
+  });
 }
 
 function broadcastToWindows(channel, data) {
@@ -564,10 +577,10 @@ const shortcutActions = {
             const view = focusedWindow.getBrowserView();
             if (view) {
                 focusedWindow.removeBrowserView(view);
-                detachedViews.set(focusedWindow, view);
+                detachedViews.set(focusedWindow, view); 
             }
             focusedWindow.loadFile('onboarding.html');
-            setCanvasMode(false, focusedWindow);
+            setCanvasMode(false, focusedWindow); 
         }
     },
     search: () => triggerSearch(),
@@ -699,7 +712,7 @@ if (settings.alwaysOnTop) {
           ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') 
           : settings.theme;
       newWin.webContents.send('theme-updated', themeToSend);
-
+      
       // If global shortcuts are disabled, send the local shortcuts to the new window
       if (!settings.shortcutsGlobal) {
           const localShortcuts = { ...settings.shortcuts };
@@ -766,6 +779,21 @@ function loadGemini(targetWin) {
   const bounds = targetWin.getBounds();
   newView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
   newView.setAutoResize({ width: true, height: true });
+if (!settings.shortcutsGlobal) {
+  const localShortcuts = { ...settings.shortcuts };
+  delete localShortcuts.showHide;        // משאירים את Alt+G גלובלי בלבד
+  // שליחה ראשונית
+  if (newView.webContents && !newView.webContents.isDestroyed()) {
+    newView.webContents.send('set-local-shortcuts', localShortcuts);
+  }
+  // שליחה חוזרת בכל טעינה מחדש של Gemini (כדי לא לאבד קיצורים בניווטים פנימיים)
+  newView.webContents.on('did-finish-load', () => {
+    if (!settings.shortcutsGlobal && newView.webContents && !newView.webContents.isDestroyed()) {
+      newView.webContents.send('set-local-shortcuts', localShortcuts);
+    }
+  });
+}
+
 }
 // ================================================================= //
 // Animation and Resizing Functions (Unchanged from original)
