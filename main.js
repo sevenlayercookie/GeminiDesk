@@ -12,6 +12,7 @@ let updateWin = null;
 let downloadWin = null;
 let notificationWin = null;
 let lastFetchedMessageId = null;
+let lastFocusedWindow = null;
 
 const execPath = process.execPath;
 // Allow third-party/partitioned cookies used by Google Sign-In
@@ -70,7 +71,7 @@ const defaultSettings = {
   shortcutsGlobal: true,
   shortcuts: {
     showHide: isMac ? 'Command+G' : 'Alt+G', // ← דוגמה לתיקון
-    quit: isMac ? 'Command+Q' : 'Alt+Q',
+    quit: isMac ? 'Command+Q' : 'Control+W',
     showInstructions: isMac ? 'Command+I' : 'Alt+I',
     screenshot: isMac ? 'Command+Alt+S' : 'Control+Alt+S', // אין מקביל מדויק ב-Mac, עדיף להשאיר ל-Mac
     newChatPro: isMac ? 'Command+P' : 'Alt+P',
@@ -78,7 +79,7 @@ const defaultSettings = {
     newWindow: isMac ? 'Command+N' : 'Alt+N',
     search: isMac ? 'Command+S' : 'Alt+S',
     refresh: isMac ? 'Command+R' : 'Alt+R',
-    closeWindow: isMac ? 'Command+W' : 'Control+W'
+    closeWindow: isMac ? 'Command+W' : 'Alt+Q'
   },
 lastUpdateCheck: 0,
 microphoneGranted: null,
@@ -467,107 +468,124 @@ function setAutoLaunch(shouldEnable) {
 function registerShortcuts() {
     // Unregister all shortcuts before registering new ones to avoid conflicts
     globalShortcut.unregisterAll();
-
-    if (!settings.shortcutsGlobal) {
-        console.log('Global shortcuts are disabled.');
-        return;
-    }
-
     const shortcuts = settings.shortcuts;
 
+    // Register show/hide shortcut regardless of global settings
+    if (shortcuts.showHide) {
+        globalShortcut.register(shortcuts.showHide, () => {
+            const allWindows = BrowserWindow.getAllWindows();
+            if (allWindows.length === 0) return;
 
-let lastFocusedWindow = null;
+            const shouldShow = allWindows.some(win => !win.isVisible());
 
-if (shortcuts.showHide) {
-  globalShortcut.register(shortcuts.showHide, () => {
-    const allWindows = BrowserWindow.getAllWindows();
-    if (allWindows.length === 0) return;
+            if (!shouldShow) {
+                isUserTogglingHide = true;
+                setTimeout(() => { isUserTogglingHide = false; }, 500);
+            }
 
-    const shouldShow = allWindows.some(win => !win.isVisible());
+            allWindows.forEach(win => {
+                if (shouldShow) {
+                    if (win.isMinimized()) win.restore();
+                    win.show();
+                } else {
+                    win.hide();
+                }
+            });
 
-    if (!shouldShow) {
-      // אנחנו בדרך להסתיר – סימון כדי שמאזיני blur לא “יריםו” חזרה
-      isUserTogglingHide = true;
-      setTimeout(() => { isUserTogglingHide = false; }, 500);
+            if (shouldShow) {
+                const focused = allWindows.find(w => w.isFocused());
+                if (focused) {
+                    lastFocusedWindow = focused;
+                } else if (!lastFocusedWindow || lastFocusedWindow.isDestroyed()) {
+                    lastFocusedWindow = allWindows[0];
+                }
+
+                if (lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
+                    setTimeout(() => {
+                        forceOnTop(lastFocusedWindow);
+                        const view = lastFocusedWindow.getBrowserView();
+                        if (view && view.webContents && !view.webContents.isDestroyed()) {
+                            view.webContents.focus();
+                        }
+                    }, 100);
+                }
+            }
+        });
     }
 
-    allWindows.forEach(win => {
-      if (shouldShow) {
-        if (win.isMinimized()) win.restore();
-        win.show();
-      } else {
-        win.hide();
-      }
-    });
+    // Prepare local shortcuts, excluding the one that's always global
+    const localShortcuts = { ...settings.shortcuts };
+    delete localShortcuts.showHide;
 
-    // אם מציגים – תן בוסט ל-topmost והחזר פוקוס
-    if (shouldShow) {
-      const lastFocusedWindow = allWindows.find(w => w.isFocused()) || allWindows[0];
-      if (lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
-        setTimeout(() => {
-          forceOnTop(lastFocusedWindow);
-          const view = lastFocusedWindow.getBrowserView();
-          if (view && view.webContents && !view.webContents.isDestroyed()) {
-            view.webContents.focus();
-          }
-        }, 100);
-      }
+    if (settings.shortcutsGlobal) {
+        console.log('Registering GLOBAL shortcuts.');
+        // Register all other shortcuts globally
+        for (const action in localShortcuts) {
+            if (localShortcuts[action] && shortcutActions[action]) {
+                globalShortcut.register(localShortcuts[action], shortcutActions[action]);
+            }
+        }
+        // Tell renderer to clear any local shortcuts
+        broadcastToWindows('set-local-shortcuts', {});
+    } else {
+        console.log('Registering LOCAL shortcuts.');
+        // Tell renderer to set local shortcuts
+        broadcastToWindows('set-local-shortcuts', localShortcuts);
     }
-  });
 }
 
+function broadcastToWindows(channel, data) {
+    BrowserWindow.getAllWindows().forEach(win => {
+        if (win && !win.isDestroyed()) {
+            win.webContents.send(channel, data);
+        }
+    });
+}
 
-    if (shortcuts.newChatPro) {
-        globalShortcut.register(shortcuts.newChatPro, () => createNewChatWithModel('Pro'));
-    }
-
-    if (shortcuts.newChatFlash) {
-        globalShortcut.register(shortcuts.newChatFlash, () => createNewChatWithModel('Flash'));
-    }
-
-    if (shortcuts.quit) {
-        globalShortcut.register(shortcuts.quit, () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
+const shortcutActions = {
+    quit: () => app.quit(),
+    closeWindow: () => {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        if (focusedWindow) {
+            const allWindows = BrowserWindow.getAllWindows();
+            if (allWindows.length > 1) {
                 focusedWindow.close();
+            } else {
+                focusedWindow.hide();
             }
-        });
-    }
-
-    if (shortcuts.showInstructions) {
-        globalShortcut.register(shortcuts.showInstructions, () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow && !focusedWindow.isDestroyed()) {
-                const view = focusedWindow.getBrowserView();
-                if (view) {
-                    // Detach the view from the window and save it
-                    focusedWindow.removeBrowserView(view);
-                    detachedViews.set(focusedWindow, view); 
-                }
-                focusedWindow.loadFile('onboarding.html');
-                setCanvasMode(false, focusedWindow); 
+        }
+    },
+    newWindow: () => createWindow(),
+    newChatPro: () => createNewChatWithModel('Pro'),
+    newChatFlash: () => createNewChatWithModel('Flash'),
+    showInstructions: () => {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        if (focusedWindow && !focusedWindow.isDestroyed()) {
+            const view = focusedWindow.getBrowserView();
+            if (view) {
+                focusedWindow.removeBrowserView(view);
+                detachedViews.set(focusedWindow, view);
             }
-        });
-    }
+            focusedWindow.loadFile('onboarding.html');
+            setCanvasMode(false, focusedWindow);
+        }
+    },
+    search: () => triggerSearch(),
+    refresh: () => reloadFocusedView(),
+    screenshot: () => {
+        let isScreenshotProcessActive = false;
+        let screenshotTargetWindow = null;
 
-if (shortcuts.screenshot) {
-    let isScreenshotProcessActive = false;
-    let screenshotTargetWindow = null;
-    
-    globalShortcut.register(shortcuts.screenshot, () => {
         if (isQuitting || isScreenshotProcessActive) {
             return;
         }
         isScreenshotProcessActive = true;
         
-        // אם כל החלונות מוסתרים, קח את החלון האחרון שהיה פעיל
         let targetWin = BrowserWindow.getFocusedWindow();
         if (!targetWin) {
-            // אם אין חלון בפוקוس, נסה את החלון האחרון שהיה פעיל (מהמשתנה של showHide)
             if (lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
                 targetWin = lastFocusedWindow;
             } else {
-                // אם גם זה לא עובד, קח את הראשון מהרשימה
                 const allWindows = BrowserWindow.getAllWindows();
                 targetWin = allWindows.length > 0 ? allWindows[0] : null;
             }
@@ -580,109 +598,70 @@ if (shortcuts.screenshot) {
         
         screenshotTargetWindow = targetWin;
         proceedWithScreenshot();
-    });
 
-function proceedWithScreenshot() {
-    // נקה את הלוח
-    clipboard.clear();
+        function proceedWithScreenshot() {
+            clipboard.clear();
+            let cmd, args;
+            if (process.platform === 'win32') {
+                cmd = 'explorer';
+                args = ['ms-screenclip:'];
+            } else {
+                cmd = 'screencapture';
+                args = ['-i', '-c'];
+            }
+            const snippingTool = spawn(cmd, args, { detached: true, stdio: 'ignore' });
+            snippingTool.unref();
 
-    // בחר פקודת צילום מסך לפי פלטפורמה
-    let cmd, args;
-    if (process.platform === 'win32') {
-        // Windows: Snip & Sketch
-        cmd = 'explorer';
-        args = ['ms-screenclip:'];
-    } else {
-        // macOS/Linux: screencapture אינטראקטיבי + העתקה ללוח
-        cmd = 'screencapture';
-        args = ['-i', '-c']; // שים לב לשינוי: פירוק הדגלים למערך נפרד :contentReference[oaicite:1]{index=1}
-    }
+            let processExited = false;
+            snippingTool.on('exit', () => { processExited = true; });
+            snippingTool.on('error', (err) => {
+                console.error('Failed to start snipping tool:', err);
+                isScreenshotProcessActive = false;
+            });
 
-    // השקת כלי הצילום
-    const snippingTool = spawn(cmd, args, { detached: true, stdio: 'ignore' });
-    snippingTool.unref();
-
-    let processExited = false;
-    snippingTool.on('exit', () => {
-        processExited = true;
-    });
-    snippingTool.on('error', (err) => {
-        console.error('Failed to start snipping tool:', err);
-        isScreenshotProcessActive = false;
-    });
-
-    // בדיקה רציפה של הלוח עד שמתקבל צילום
-    let checkAttempts = 0;
-    const maxAttempts = 60;
-    const intervalId = setInterval(() => {
-        const image = clipboard.readImage();
-
-        if (!image.isEmpty() && processExited) {
-            clearInterval(intervalId);
-
-            if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
-                // הבט שהחלון פעיל ומרכז עליו פוקוס
-                if (!screenshotTargetWindow.isVisible()) screenshotTargetWindow.show();
-                if (screenshotTargetWindow.isMinimized()) screenshotTargetWindow.restore();
-
-                // שמור ושנה זמנית את alwaysOnTop כדי למנוע הסתרה
-                const originalAlwaysOnTop = screenshotTargetWindow.isAlwaysOnTop();
-                screenshotTargetWindow.setAlwaysOnTop(true);
-                screenshotTargetWindow.focus();
-
-                const viewInstance = screenshotTargetWindow.getBrowserView();
-                if (viewInstance && viewInstance.webContents) {
-                    setTimeout(() => {
-                        viewInstance.webContents.focus();
-                        viewInstance.webContents.paste();
-                        console.log('Screenshot pasted!');
-
-                        // החזר את ההגדרה המקורית של alwaysOnTop
-                        setTimeout(() => {
-                            if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
-                                screenshotTargetWindow.setAlwaysOnTop(settings.alwaysOnTop);
-                            }
-                        }, 500);
-                    }, 200);
+            let checkAttempts = 0;
+            const maxAttempts = 60;
+            const intervalId = setInterval(() => {
+                const image = clipboard.readImage();
+                if (!image.isEmpty() && processExited) {
+                    clearInterval(intervalId);
+                    if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
+                        if (!screenshotTargetWindow.isVisible()) screenshotTargetWindow.show();
+                        if (screenshotTargetWindow.isMinimized()) screenshotTargetWindow.restore();
+                        screenshotTargetWindow.setAlwaysOnTop(true);
+                        screenshotTargetWindow.focus();
+                        const viewInstance = screenshotTargetWindow.getBrowserView();
+                        if (viewInstance && viewInstance.webContents) {
+                            setTimeout(() => {
+                                viewInstance.webContents.focus();
+                                viewInstance.webContents.paste();
+                                console.log('Screenshot pasted!');
+                                setTimeout(() => {
+                                    if (screenshotTargetWindow && !screenshotTargetWindow.isDestroyed()) {
+                                        screenshotTargetWindow.setAlwaysOnTop(settings.alwaysOnTop);
+                                    }
+                                }, 500);
+                            }, 200);
+                        }
+                    }
+                    isScreenshotProcessActive = false;
+                    screenshotTargetWindow = null;
+                } else if (checkAttempts++ > maxAttempts) {
+                    clearInterval(intervalId);
+                    isScreenshotProcessActive = false;
+                    screenshotTargetWindow = null;
                 }
-            }
-
-            isScreenshotProcessActive = false;
-            screenshotTargetWindow = null;
-        } else if (checkAttempts++ > maxAttempts) {
-            clearInterval(intervalId);
-            isScreenshotProcessActive = false;
-            screenshotTargetWindow = null;
+            }, 500);
         }
-    }, 500);
-}
-}
-// Add shortcut for search
-    if (shortcuts.search) {
-        globalShortcut.register(shortcuts.search, () => {
-            triggerSearch();
-        });
     }
-    if (shortcuts.refresh) {
-        globalShortcut.register(shortcuts.refresh, () => {
-            reloadFocusedView();
-        });
-    }
-    if (shortcuts.newWindow) {
-        globalShortcut.register(shortcuts.newWindow, () => {
-            createWindow();
-        });
-    }
+};
 
-    if (shortcuts.closeWindow) {
-        globalShortcut.register(shortcuts.closeWindow, () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-                focusedWindow.close();
-            }
-        });
+ipcMain.on('execute-shortcut', (event, action) => {
+    if (shortcutActions[action]) {
+        shortcutActions[action]();
     }
-}
+});
+
 function createWindow() {
 const newWin = new BrowserWindow({
   width: originalSize.width,
@@ -720,6 +699,13 @@ if (settings.alwaysOnTop) {
           ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') 
           : settings.theme;
       newWin.webContents.send('theme-updated', themeToSend);
+
+      // If global shortcuts are disabled, send the local shortcuts to the new window
+      if (!settings.shortcutsGlobal) {
+          const localShortcuts = { ...settings.shortcuts };
+          delete localShortcuts.showHide;
+          newWin.webContents.send('set-local-shortcuts', localShortcuts);
+      }
   });
 
 newWin.on('focus', () => {

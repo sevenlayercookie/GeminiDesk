@@ -1,6 +1,55 @@
 // In preload.js
 const { contextBridge, ipcRenderer } = require('electron');
 
+// --- Local Shortcut Handling ---
+let localShortcuts = {};
+
+// Function to convert a keyboard event to an Electron Accelerator string
+function eventToShortcutString(e) {
+    const parts = [];
+    // Start with modifiers
+    if (e.ctrlKey) parts.push('Control');
+    if (e.altKey) parts.push('Alt');
+    if (e.shiftKey) parts.push('Shift');
+    // Note: metaKey is the Command key on macOS and the Windows key on Windows.
+    // Electron uses 'Super' for this in accelerators.
+    if (e.metaKey) parts.push('Super');
+
+    // Add the base key, avoiding double-counting modifiers
+    if (!['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+        // Use e.code to get the physical key, which is more reliable.
+        // The recording logic in settings.html uses this format.
+        const keyCode = e.code.replace('Key', '').replace('Digit', '');
+        parts.push(keyCode);
+    }
+
+    return parts.join('+');
+}
+
+// Listen for keydown events at the window level
+window.addEventListener('keydown', (e) => {
+    // If there are no local shortcuts registered, do nothing
+    if (Object.keys(localShortcuts).length === 0) return;
+
+    const shortcutString = eventToShortcutString(e);
+
+    // Check if the pressed combination matches a known local shortcut
+    for (const action in localShortcuts) {
+        if (localShortcuts[action] === shortcutString) {
+            e.preventDefault(); // Prevent the browser from handling the event
+            ipcRenderer.send('execute-shortcut', action);
+            return;
+        }
+    }
+}, true);
+
+// Listen for the main process to send the list of local shortcuts
+ipcRenderer.on('set-local-shortcuts', (event, shortcuts) => {
+    console.log('Received local shortcuts:', shortcuts);
+    localShortcuts = shortcuts || {}; // Ensure it's always an object
+});
+
+
 contextBridge.exposeInMainWorld('electronAPI', {
   theme: {
     getResolved: () => ipcRenderer.invoke('theme:get-resolved'),
