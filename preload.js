@@ -12,17 +12,16 @@ function eventToShortcutString(e) {
     if (e.altKey) parts.push('Alt');
     if (e.shiftKey) parts.push('Shift');
     // Note: metaKey is the Command key on macOS and the Windows key on Windows.
-    // Electron uses 'Super' for this in accelerators.
-    if (e.metaKey) parts.push('Super');
+if (e.metaKey) parts.push(process.platform === 'darwin' ? 'Command' : 'Super');
 
     // Add the base key, avoiding double-counting modifiers
     if (!['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
-        // Use e.code to get the physical key, which is more reliable.
-        // The recording logic in settings.html uses this format.
-        const keyCode = e.code.replace('Key', '').replace('Digit', '');
-        parts.push(keyCode);
-    }
+let keyCode = e.code.replace('Key', '').replace('Digit', '');
+if (keyCode.length === 1) keyCode = keyCode.toUpperCase();
+parts.push(keyCode);
 
+    }
+    
     return parts.join('+');
 }
 
@@ -32,7 +31,7 @@ window.addEventListener('keydown', (e) => {
     if (Object.keys(localShortcuts).length === 0) return;
 
     const shortcutString = eventToShortcutString(e);
-
+    
     // Check if the pressed combination matches a known local shortcut
     for (const action in localShortcuts) {
         if (localShortcuts[action] === shortcutString) {
