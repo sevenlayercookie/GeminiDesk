@@ -213,12 +213,20 @@
                 Shortcuts
             </h3>
             <div class="setting-item">
+                <div class="setting-label"><strong>Enable Global Shortcuts</strong><span>Allow shortcuts to work from any app.</span></div>
+                <label class="toggle-switch"><input type="checkbox" id="setting-shortcutsGlobal"><span class="slider"></span></label>
+            </div>
+            <div class="setting-item">
                 <div class="setting-label"><strong>Show / Hide Window</strong><span>Toggle window visibility.</span></div>
                 <button class="record-button" data-key="showHide">Click to record</button>
             </div>
             <div class="setting-item">
                 <div class="setting-label"><strong>Open New Window</strong><span>Creates a new, separate window.</span></div>
                 <button class="record-button" data-key="newWindow">Click to record</button>
+            </div>
+            <div class="setting-item">
+                <div class="setting-label"><strong>Close Window</strong><span>Closes the current window.</span></div>
+                <button class="record-button" data-key="closeWindow">Click to record</button>
             </div>
             <div class="setting-item">
                 <div class="setting-label"><strong>Quit Application</strong><span>Close the application.</span></div>
@@ -292,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('setting-alwaysOnTop').checked = settings.alwaysOnTop || false;
             document.getElementById('setting-autoCheckNotifications').checked = settings.autoCheckNotifications || false;
             document.getElementById('setting-enableCanvasResizing').checked = settings.enableCanvasResizing || false;
+            document.getElementById('setting-shortcutsGlobal').checked = settings.shortcutsGlobal !== false;
             
             // Update shortcut buttons
             document.querySelectorAll('.record-button').forEach(button => {
@@ -342,6 +351,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('setting-enableCanvasResizing').addEventListener('change', (e) => {
         electronAPI.updateSetting('enableCanvasResizing', e.target.checked);
+    });
+
+    document.getElementById('setting-shortcutsGlobal').addEventListener('change', (e) => {
+        electronAPI.updateSetting('shortcutsGlobal', e.target.checked);
     });
 
     // --- Manual Action Buttons ---
