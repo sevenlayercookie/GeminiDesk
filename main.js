@@ -67,6 +67,7 @@ const defaultSettings = {
   lastMessageData: null,
   autoCheckNotifications: true,
   enableCanvasResizing: true,
+  shortcutsGlobal: true,
   shortcuts: {
     showHide: isMac ? 'Command+G' : 'Alt+G', // ← דוגמה לתיקון
     quit: isMac ? 'Command+Q' : 'Alt+Q',
@@ -76,7 +77,8 @@ const defaultSettings = {
     newChatFlash: isMac ? 'Command+F' : 'Alt+F',
     newWindow: isMac ? 'Command+N' : 'Alt+N',
     search: isMac ? 'Command+S' : 'Alt+S',
-    refresh: isMac ? 'Command+R' : 'Alt+R'
+    refresh: isMac ? 'Command+R' : 'Alt+R',
+    closeWindow: isMac ? 'Command+W' : 'Control+W'
   },
 lastUpdateCheck: 0,
 microphoneGranted: null,
@@ -466,6 +468,11 @@ function registerShortcuts() {
     // Unregister all shortcuts before registering new ones to avoid conflicts
     globalShortcut.unregisterAll();
 
+    if (!settings.shortcutsGlobal) {
+        console.log('Global shortcuts are disabled.');
+        return;
+    }
+
     const shortcuts = settings.shortcuts;
 
 
@@ -664,6 +671,15 @@ function proceedWithScreenshot() {
     if (shortcuts.newWindow) {
         globalShortcut.register(shortcuts.newWindow, () => {
             createWindow();
+        });
+    }
+
+    if (shortcuts.closeWindow) {
+        globalShortcut.register(shortcuts.closeWindow, () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+                focusedWindow.close();
+            }
         });
     }
 }
@@ -1508,7 +1524,7 @@ ipcMain.on('update-setting', (event, key, value) => {
     if (key === 'autoCheckNotifications') {
     scheduleNotificationCheck(); // עדכן את הטיימר
     }
-    if (key.startsWith('shortcuts.')) {
+    if (key.startsWith('shortcuts.') || key === 'shortcutsGlobal') {
         registerShortcuts(); // This function will now use the updated settings
     }
     
