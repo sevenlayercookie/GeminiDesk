@@ -56,6 +56,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     set: (theme) => ipcRenderer.send('theme:set', theme),
     onUpdate: (callback) => ipcRenderer.on('theme-updated', (_event, theme) => callback(theme)),
   },
+findInPage: (text, forward) => ipcRenderer.send('find-in-page', text, forward),
+    stopFindInPage: (action) => ipcRenderer.send('stop-find-in-page', action),
   toggleFullScreen: () => ipcRenderer.send('toggle-full-screen'), // <--- הוסף שורה זו
   completeOnboarding: () => ipcRenderer.send('onboarding-complete'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
@@ -137,4 +139,184 @@ contextBridge.exposeInMainWorld('notificationAPI', {
     closeWindow: () => ipcRenderer.send('close-notification-window'),
     requestLastNotification: () => ipcRenderer.send('request-last-notification'),      // ← ADD THIS
     onReceiveNotification: (callback) => ipcRenderer.on('notification-data', (event, ...args) => callback(...args)),
+});
+
+// --- Find in Page functionality (v4 - Final Polished) ---
+let findBar = null;
+let findInput = null;
+
+// האזנה לתוצאות מהתהליך הראשי
+ipcRenderer.on('find-in-page-result', (event, result) => {
+    if (!findBar || !findInput) return;
+
+    const countSpan = findBar.querySelector('.find-count');
+    
+    // אם אין תוצאות, ננער את התיבה ונציג הודעה
+    if (result.matches === 0 && findInput.value !== "") {
+        countSpan.textContent = 'Not Found';
+        findBar.classList.add('shake');
+        setTimeout(() => findBar.classList.remove('shake'), 400);
+    } 
+    // אם יש תוצאות, נציג את המונה
+    else if (result.matches > 0) {
+        countSpan.textContent = `${result.activeMatchOrdinal} / ${result.matches}`;
+    } 
+    // אם התיבה ריקה, ננקה את המונה
+    else {
+        countSpan.textContent = '';
+    }
+
+    // 🔥 החזר את הפוקוס לתיבת החיפוש תמיד אחרי חיפוש, כדי לאפשר Enter חוזר
+    setTimeout(() => findInput.focus(), 0);
+});
+
+function getResolvedTheme() {
+    return document.body.classList.contains('dark') ? 'dark' : 'light';
+}
+
+function createFindBar() {
+    if (findBar) {
+        findInput.focus();
+        return;
+    }
+    const isDark = getResolvedTheme() === 'dark';
+
+    // --- אייקונים מעודנים יותר ---
+    const svgIcon = (path) => {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("width", "20");
+        svg.setAttribute("height", "20");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("fill", "currentColor");
+        svg.style.pointerEvents = "none";
+        const pathElement = document.createElementNS(svgNS, "path");
+        pathElement.setAttribute("d", path);
+        svg.appendChild(pathElement);
+        return svg;
+    };
+    const prevIconPath = "M15.7 16.3l-4.6-4.6 4.6-4.6L14.3 5.7 8.3 11.7l6 6 1.4-1.4z";
+    const nextIconPath = "M9.7 16.3l4.6-4.6-4.6-4.6L11.1 5.7l6 6-6 6-1.4-1.4z";
+    const closeIconPath = "M18.3 5.71L12 12.01 5.7 5.71 4.29 7.12 10.59 13.42 4.29 19.72 5.7 21.13 12 14.83l6.3 6.3 1.41-1.41L13.41 13.42l6.3-6.3-1.41-1.41z";
+
+    // --- הוספת אנימציות וסגנונות CSS לדף ---
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = `
+        @keyframes findBarFadeIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 50%, 90% { transform: translateX(-3px); }
+            30%, 70% { transform: translateX(3px); }
+        }
+        .find-bar-wrapper {
+             transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .find-bar-wrapper:focus-within {
+            box-shadow: 0 0 0 2px ${isDark ? 'rgba(138, 180, 248, 0.5)' : 'rgba(26, 115, 232, 0.4)'}, 0 8px 32px rgba(0,0,0,0.3);
+            border-color: ${isDark ? 'rgba(138, 180, 248, 0.7)' : '#1a73e8'};
+        }
+        .find-bar-wrapper.shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+    `;
+    document.head.appendChild(styleSheet);
+
+    // --- בניית אלמנטי ה-UI ---
+    findBar = document.createElement('div');
+    findBar.className = 'find-bar-wrapper';
+    findBar.style.cssText = `
+        position: fixed; top: 12px; right: 16px; z-index: 10001;
+        background: ${isDark ? 'radial-gradient(circle, rgba(45,48,53,0.9) 0%, rgba(33,36,41,0.85) 100%)' : 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(248,249,250,0.85) 100%)'};
+        backdrop-filter: blur(16px) saturate(180%);
+        border: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'};
+        border-radius: 50px; padding: 5px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        display: flex; align-items: center; gap: 4px;
+        font-family: 'Google Sans', 'Roboto', sans-serif;
+        color: ${isDark ? '#e8eaed' : '#3c4043'};
+        animation: findBarFadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    `;
+
+    findInput = document.createElement('input');
+    findInput.placeholder = 'Search...';
+    findInput.title = 'Press Enter to find (Shift+Enter for previous)';
+    findInput.style.cssText = `
+        border: none; background: transparent; color: inherit; 
+        padding: 4px 12px; outline: none; width: 140px; font-size: 14px;
+    `;
+
+    const countSpan = document.createElement('span');
+    countSpan.className = 'find-count';
+    countSpan.style.cssText = `
+        min-width: 70px; text-align: center; font-size: 13px;
+        padding: 0 6px; color: ${isDark ? '#9aa0a6' : '#5f6368'};
+        border-left: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+        border-right: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+    `;
+
+    const createButton = (iconPath, title) => {
+        const button = document.createElement('button');
+        button.title = title;
+        button.appendChild(svgIcon(iconPath));
+        button.style.cssText = `
+            background-color: transparent; border: none; color: ${isDark ? '#bdc1c6' : '#5f6368'};
+            cursor: pointer; width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            transition: background-color 0.2s, color 0.2s;
+        `;
+        button.onmouseenter = () => { button.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'; };
+        button.onmouseleave = () => { button.style.backgroundColor = 'transparent'; };
+        return button;
+    };
+    const prevButton = createButton(prevIconPath, 'Previous (Shift+Enter)');
+    const nextButton = createButton(nextIconPath, 'Next (Enter)');
+    const closeButton = createButton(closeIconPath, 'Close (Esc)');
+    
+    findBar.append(findInput, countSpan, prevButton, nextButton, closeButton);
+    document.body.appendChild(findBar);
+
+    // --- לוגיקת האירועים הפשוטה והסופית ---
+
+    findInput.addEventListener('input', (e) => {
+        if (e.target.value === '') {
+            ipcRenderer.send('stop-find-in-page', 'clearSelection');
+            countSpan.textContent = '';
+        }
+    });
+
+    findInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (findInput.value) {
+                ipcRenderer.send('start-find-in-page', findInput.value, !e.shiftKey);
+            }
+        } else if (e.key === 'Escape') {
+            closeButton.click();
+        }
+    });
+    
+    nextButton.addEventListener('click', () => {
+        if (findInput.value) ipcRenderer.send('start-find-in-page', findInput.value, true);
+    });
+    prevButton.addEventListener('click', () => {
+        if (findInput.value) ipcRenderer.send('start-find-in-page', findInput.value, false);
+    });
+
+    closeButton.addEventListener('click', () => {
+        if (findBar) {
+            findBar.remove();
+            styleSheet.remove();
+            findBar = null;
+            findInput = null;
+            ipcRenderer.send('stop-find-in-page', 'clearSelection');
+        }
+    });
+
+    findInput.focus();
+
+}
+
+// --- נקודת הכניסה ---
+ipcRenderer.on('show-find-bar', () => {
+    createFindBar();
 });
