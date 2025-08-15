@@ -13,7 +13,6 @@ let downloadWin = null;
 let notificationWin = null;
 let lastFetchedMessageId = null;
 let lastFocusedWindow = null;
-
 const execPath = process.execPath;
 // Allow third-party/partitioned cookies used by Google Sign-In
 app.commandLine.appendSwitch('enable-features', 'ThirdPartyStoragePartitioning');
@@ -79,6 +78,7 @@ const defaultSettings = {
     newWindow: isMac ? 'Command+N' : 'Alt+N',
     search: isMac ? 'Command+S' : 'Alt+S',
     refresh: isMac ? 'Command+R' : 'Alt+R',
+     findInPage: isMac ? 'Command+F' : 'Control+F', 
     closeWindow: isMac ? 'Command+W' : 'Alt+Q'
   },
 lastUpdateCheck: 0,
@@ -369,7 +369,7 @@ async function checkForNotifications(isManualCheck = false) {
 
   try {
     // Avoid cached responses so "no new message" vs. "new message" is always fresh.
-    const response = await fetch('https://latex-r70v.onrender.com/latest-message', {
+    const response = await fetch('https://latex-v25b.onrender.com/latest-message', {
       cache: 'no-cache',
       signal: controller.signal
     });
@@ -521,6 +521,7 @@ function registerShortcuts() {
         console.log('Registering GLOBAL shortcuts.');
         // Register all other shortcuts globally
         for (const action in localShortcuts) {
+                 if (action === 'findInPage') continue; 
             if (localShortcuts[action] && shortcutActions[action]) {
                 globalShortcut.register(localShortcuts[action], shortcutActions[action]);
             }
@@ -568,6 +569,15 @@ const shortcutActions = {
             }
         }
     },
+findInPage: () => {
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow) {
+        const view = focusedWindow.getBrowserView();
+        if (view && !view.webContents.isDestroyed()) {
+            view.webContents.send('show-find-bar');
+        }
+    }
+},
     newWindow: () => createWindow(),
     newChatPro: () => createNewChatWithModel('Pro'),
     newChatFlash: () => createNewChatWithModel('Flash'),
@@ -668,6 +678,30 @@ const shortcutActions = {
         }
     }
 };
+ipcMain.on('start-find-in-page', (event, searchText, findNext = true) => {
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow) {
+        const view = focusedWindow.getBrowserView();
+        if (view && !view.webContents.isDestroyed()) {
+            if (searchText.trim() === '') { // <-- Fix: Check for empty string
+                view.webContents.stopFindInPage('clearSelection');
+                return;
+            }
+            view.webContents.findInPage(searchText, { findNext: findNext });
+        }
+    }
+});
+
+ipcMain.on('stop-find-in-page', (event, action) => {
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    if (focusedWindow) {
+        const view = focusedWindow.getBrowserView();
+        if (view && !view.webContents.isDestroyed()) {
+            view.webContents.stopFindInPage(action);
+        }
+    }
+});
+
 
 ipcMain.on('execute-shortcut', (event, action) => {
     if (shortcutActions[action]) {
@@ -735,7 +769,19 @@ newWin.on('focus', () => {
         }
     }, 100);
 });
+newWin.on('focus', () => {
+    const findShortcut = settings.shortcuts.findInPage;
+    if (findShortcut) {
+        globalShortcut.register(findShortcut, shortcutActions.findInPage);
+    }
+});
 
+newWin.on('blur', () => {
+    const findShortcut = settings.shortcuts.findInPage;
+    if (findShortcut) {
+        globalShortcut.unregister(findShortcut);
+    }
+});
   newWin.on('closed', () => {
     detachedViews.delete(newWin);
   });
@@ -768,6 +814,12 @@ function loadGemini(targetWin) {
       }
     });
 
+newView.webContents.on('found-in-page', (event, result) => {
+    // שולחים את התוצאה ישירות בחזרה לתהליך ה-renderer שביקש את החיפוש
+    if (event.sender && !event.sender.isDestroyed()) {
+        event.sender.send('find-in-page-result', result);
+    }
+});
     newView.webContents.on('will-navigate', (event, url) => {
       if (url.startsWith('file://')) {
         event.preventDefault();
@@ -779,6 +831,7 @@ function loadGemini(targetWin) {
   const bounds = targetWin.getBounds();
   newView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
   newView.setAutoResize({ width: true, height: true });
+
 if (!settings.shortcutsGlobal) {
   const localShortcuts = { ...settings.shortcuts };
   delete localShortcuts.showHide;        // משאירים את Alt+G גלובלי בלבד
@@ -1044,7 +1097,7 @@ async function reportErrorToServer(error) {
     if (!error) return;
     console.error('Reporting error to server:', error);
     try {
-        await fetch('https://latex-r70v.onrender.com/error', { // ודא שזו כתובת ה-worker שלך
+        await fetch('https://latex-v25b.onrender.com/error', { // ודא שזו כתובת ה-worker שלך
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1063,17 +1116,13 @@ async function reportErrorToServer(error) {
 // ================================================================= //
 
 function broadcastThemeChange(newTheme) {
-    const themeToSend = newTheme === 'system' 
-        ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') 
+    const themeToSend = newTheme === 'system'
+        ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light')
         : newTheme;
-    
-    BrowserWindow.getAllWindows().forEach(win => {
-        if (win && !win.isDestroyed()) {
-            win.webContents.send('theme-updated', themeToSend);
-        }
-    });
-}
 
+    // השתמש בפונקציה הזו כדי לשלוח את העדכון גם לחלון הראשי וגם ל-BrowserView
+    broadcastToAllWebContents('theme-updated', themeToSend);
+}
 function syncThemeWithWebsite(theme) {
     if (['light', 'dark', 'system'].includes(theme)) {
         nativeTheme.themeSource = theme;
@@ -1117,7 +1166,7 @@ gemSession.setUserAgent(
 );
 const sendPing = async () => {
     try {
-        await fetch('https://latex-r70v.onrender.com/ping-stats', { // ודא שזו כתובת ה-worker שלך
+        await fetch('https://latex-v25b.onrender.com/ping-stats', { // ודא שזו כתובת ה-worker שלך
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ version: app.getVersion() })
@@ -1379,7 +1428,7 @@ ipcMain.on('request-last-notification', async (event) => {
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const response = await fetch('https://latex-r70v.onrender.com/latest-message', {
+    const response = await fetch('https://latex-v25b.onrender.com/latest-message', {
       cache: 'no-cache', // <-- הוספנו את זה
       signal: controller.signal
     });
