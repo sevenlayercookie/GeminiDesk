@@ -1,4 +1,7 @@
 const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, dialog, screen, shell, session, nativeTheme } = require('electron');
+const REAL_CHROME_UA =
+  `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+    const STABLE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36';
 const { autoUpdater } = require('electron-updater');
 const AutoLaunch = require('auto-launch');
 const path = require('path');
@@ -6,6 +9,10 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const { clipboard, nativeImage } = require('electron');
 const https = require('https'); // לביצוע בקשת API ל-GitHub
+const Store = require('electron-store');
+const os = require('os');
+const crypto = require('crypto');
+const fetch = require('node-fetch');
 let confirmWin = null;
 let isQuitting = false;
 let updateWin = null;
@@ -13,6 +20,7 @@ let downloadWin = null;
 let notificationWin = null;
 let lastFetchedMessageId = null;
 let lastFocusedWindow = null;
+const loginSaver = require('./save.js');
 const execPath = process.execPath;
 // Allow third-party/partitioned cookies used by Google Sign-In
 app.commandLine.appendSwitch('enable-features', 'ThirdPartyStoragePartitioning');
@@ -61,6 +69,7 @@ const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settingsWin = null;
 const defaultSettings = {
   onboardingShown: false,
+  defaultMode: 'ask', 
   autoStart: false,
   alwaysOnTop: true,
   lastShownNotificationId: null, 
@@ -569,18 +578,68 @@ const shortcutActions = {
             }
         }
     },
-findInPage: () => {
-    const focusedWindow = BrowserWindow.getFocusedWindow();
-    if (focusedWindow) {
-        const view = focusedWindow.getBrowserView();
-        if (view && !view.webContents.isDestroyed()) {
-            view.webContents.send('show-find-bar');
+    findInPage: () => {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        if (focusedWindow) {
+            const view = focusedWindow.getBrowserView();
+            if (view && !view.webContents.isDestroyed()) {
+                view.webContents.send('show-find-bar');
+            }
         }
-    }
-},
+    },
     newWindow: () => createWindow(),
-    newChatPro: () => createNewChatWithModel('Pro'),
-    newChatFlash: () => createNewChatWithModel('Flash'),
+    newChatPro: () => {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        if (!focusedWindow || !focusedWindow.appMode) return;
+        const view = focusedWindow.getBrowserView();
+        if (!view) return;
+
+        if (focusedWindow.appMode === 'aistudio') {
+            view.webContents.loadURL('https://aistudio.google.com/prompts/new_chat?model=gemini-1.5-pro-latest');
+        } else {
+            createNewChatWithModel('Pro');
+        }
+    },
+    newChatFlash: () => {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        if (!focusedWindow || !focusedWindow.appMode) return;
+        const view = focusedWindow.getBrowserView();
+        if (!view) return;
+
+        if (focusedWindow.appMode === 'aistudio') {
+            view.webContents.loadURL('https://aistudio.google.com/prompts/new_chat?model=gemini-1.5-flash-latest');
+        } else {
+            createNewChatWithModel('Flash');
+        }
+    },
+    search: () => {
+        const focusedWindow = BrowserWindow.getFocusedWindow();
+        if (!focusedWindow || !focusedWindow.appMode) return;
+
+        if (focusedWindow.appMode === 'aistudio') {
+            const view = focusedWindow.getBrowserView();
+            if (!view) return;
+
+            const libraryUrl = 'https://aistudio.google.com/library';
+            const focusScript = `
+                const input = document.querySelector('input[placeholder="Search"]');
+                if (input) input.focus();
+            `;
+
+            if (view.webContents.getURL().startsWith(libraryUrl)) {
+                view.webContents.executeJavaScript(focusScript).catch(console.error);
+            } else {
+                view.webContents.loadURL(libraryUrl);
+                view.webContents.once('did-finish-load', () => {
+                    setTimeout((
+                      
+                    ) => view.webContents.executeJavaScript(focusScript).catch(console.error), 500);
+                });
+            }
+        } else {
+            triggerSearch(); 
+        }
+    },
     showInstructions: () => {
         const focusedWindow = BrowserWindow.getFocusedWindow();
         if (focusedWindow && !focusedWindow.isDestroyed()) {
@@ -593,7 +652,6 @@ findInPage: () => {
             setCanvasMode(false, focusedWindow); 
         }
     },
-    search: () => triggerSearch(),
     refresh: () => reloadFocusedView(),
     screenshot: () => {
         let isScreenshotProcessActive = false;
@@ -710,143 +768,308 @@ ipcMain.on('execute-shortcut', (event, action) => {
 });
 
 function createWindow() {
-const newWin = new BrowserWindow({
-  width: originalSize.width,
-  height: originalSize.height,
-  skipTaskbar: true,
-  frame: false,
-  alwaysOnTop: settings.alwaysOnTop,
-  // הוסף את שלושת השורות הבאות:
-  fullscreenable: false,   // שלא ייכנס לפול־סקרין או יתחרבש מול פול־סקרין אחר
-  focusable: true,         // ודא שניתן לקבל פוקוס
-  icon: path.join(__dirname, 'icon.ico'),
-  show: true,
-  webPreferences: {
-    preload: path.join(__dirname, 'preload.js'),
-    contextIsolation: true,
-    partition: SESSION_PARTITION
-  }
-});
-
-if (settings.alwaysOnTop) {
-  // גם ב-Windows וגם ב-macOS זה עובד טוב:
-  newWin.setAlwaysOnTop(true, 'screen-saver');
-
-  // ב-macOS כדי לראות גם בזמן פול־סקרין של אפליקציות אחרות:
-  if (process.platform === 'darwin') {
-    newWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  }
-}
-  // Attach custom properties for canvas mode state
-  newWin.isCanvasActive = false;
-  newWin.prevBounds = null;
-
-  newWin.webContents.on('did-finish-load', () => {
-      const themeToSend = settings.theme === 'system' 
-          ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') 
-          : settings.theme;
-      newWin.webContents.send('theme-updated', themeToSend);
-      
-      // If global shortcuts are disabled, send the local shortcuts to the new window
-      if (!settings.shortcutsGlobal) {
-          const localShortcuts = { ...settings.shortcuts };
-          delete localShortcuts.showHide;
-          newWin.webContents.send('set-local-shortcuts', localShortcuts);
-      }
-  });
-
-newWin.on('focus', () => {
-    if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
-
-    // רק אם החלון באמת הוא החלון הפעיל, תן פוקוס ל-webContents
-    setTimeout(() => {
-        if (newWin && !newWin.isDestroyed() && newWin.isFocused()) {
-            const view = newWin.getBrowserView();
-            if (view && view.webContents && !view.webContents.isDestroyed()) {
-                // בדוק שאף חלון אחר לא מנסה לקחת פוקוס באותו זמן
-                view.webContents.focus();
-            }
+    const newWin = new BrowserWindow({
+        width: originalSize.width,
+        height: originalSize.height,
+        skipTaskbar: true,
+        frame: false,
+        backgroundColor: '#1E1E1E', // <--- הוסף את השורה הזו
+        alwaysOnTop: settings.alwaysOnTop,
+        fullscreenable: false,
+        focusable: true,
+        icon: path.join(__dirname, 'icon.ico'),
+        show: true,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            partition: SESSION_PARTITION
         }
-    }, 100);
-});
-newWin.on('focus', () => {
-    const findShortcut = settings.shortcuts.findInPage;
-    if (findShortcut) {
-        globalShortcut.register(findShortcut, shortcutActions.findInPage);
-    }
-});
-
-newWin.on('blur', () => {
-    const findShortcut = settings.shortcuts.findInPage;
-    if (findShortcut) {
-        globalShortcut.unregister(findShortcut);
-    }
-});
-  newWin.on('closed', () => {
-    detachedViews.delete(newWin);
-  });
-
-  if (!settings.onboardingShown) {
-    newWin.loadFile('onboarding.html');
-  } else {
-    // Call the new version of the function with the specific window
-    loadGemini(newWin);
-  }
-}
-function loadGemini(targetWin) {
-  if (!targetWin || targetWin.isDestroyed()) return;
-
-  const view = targetWin.getBrowserView();
-  if (view) {
-    // If a view already exists, just load the URL
-    view.webContents.loadURL('https://gemini.google.com/app');
-    return;
-  }
-
-  targetWin.loadFile('drag.html');
-
-  const newView = new BrowserView({
-      webPreferences: {
-        partition: SESSION_PARTITION,
-        preload: path.join(__dirname, 'preload.js'),
-        contextIsolation: true,
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-      }
     });
 
-newView.webContents.on('found-in-page', (event, result) => {
-    // שולחים את התוצאה ישירות בחזרה לתהליך ה-renderer שביקש את החיפוש
-    if (event.sender && !event.sender.isDestroyed()) {
-        event.sender.send('find-in-page-result', result);
+    if (settings.alwaysOnTop) {
+        newWin.setAlwaysOnTop(true, 'screen-saver');
+        if (process.platform === 'darwin') {
+            newWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+        }
     }
-});
-    newView.webContents.on('will-navigate', (event, url) => {
-      if (url.startsWith('file://')) {
-        event.preventDefault();
-      }
+
+    // Attach custom properties for state management
+    newWin.isCanvasActive = false;
+    newWin.prevBounds = null;
+    newWin.appMode = null; // Initialize appMode property
+
+    newWin.webContents.on('did-finish-load', () => {
+        const themeToSend = settings.theme === 'system' 
+            ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') 
+            : settings.theme;
+        newWin.webContents.send('theme-updated', themeToSend);
+        
+        if (!settings.shortcutsGlobal) {
+            const localShortcuts = { ...settings.shortcuts };
+            delete localShortcuts.showHide;
+            newWin.webContents.send('set-local-shortcuts', localShortcuts);
+        }
     });
 
-    newView.webContents.loadURL('https://gemini.google.com/app');
-  targetWin.setBrowserView(newView);
-  const bounds = targetWin.getBounds();
-  newView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
-  newView.setAutoResize({ width: true, height: true });
+    newWin.on('focus', () => {
+        if (settings.alwaysOnTop) newWin.setAlwaysOnTop(true);
+        setTimeout(() => {
+            if (newWin && !newWin.isDestroyed() && newWin.isFocused()) {
+                const view = newWin.getBrowserView();
+                if (view && view.webContents && !view.webContents.isDestroyed()) {
+                    view.webContents.focus();
+                }
+            }
+        }, 100);
+        
+        const findShortcut = settings.shortcuts.findInPage;
+        if (findShortcut) {
+            globalShortcut.register(findShortcut, shortcutActions.findInPage);
+        }
+    });
 
-if (!settings.shortcutsGlobal) {
-  const localShortcuts = { ...settings.shortcuts };
-  delete localShortcuts.showHide;        // משאירים את Alt+G גלובלי בלבד
-  // שליחה ראשונית
-  if (newView.webContents && !newView.webContents.isDestroyed()) {
-    newView.webContents.send('set-local-shortcuts', localShortcuts);
-  }
-  // שליחה חוזרת בכל טעינה מחדש של Gemini (כדי לא לאבד קיצורים בניווטים פנימיים)
-  newView.webContents.on('did-finish-load', () => {
-    if (!settings.shortcutsGlobal && newView.webContents && !newView.webContents.isDestroyed()) {
-      newView.webContents.send('set-local-shortcuts', localShortcuts);
+    newWin.on('blur', () => {
+        const findShortcut = settings.shortcuts.findInPage;
+        if (findShortcut) {
+            globalShortcut.unregister(findShortcut);
+        }
+    });
+
+    newWin.on('closed', () => {
+        detachedViews.delete(newWin);
+    });
+
+    if (!settings.onboardingShown) {
+        newWin.loadFile('onboarding.html');
+    } else if (settings.defaultMode === 'ask') {
+        // טען את מסך הבחירה
+        newWin.loadFile('choice.html');
+        
+        // הגדר גודל מיוחד וקטן יותר למסך הבחירה כפי שביקשת
+        const choiceSize = { width: 500, height: 450 };
+        newWin.setResizable(false); // ננעל את הגודל זמנית
+        newWin.setBounds(choiceSize);
+        newWin.center();
+    } else {
+        // טען ישירות את האפליקציה שהמשתמש בחר כברירת מחדל
+        loadGemini(settings.defaultMode, newWin);
     }
-  });
+}
+function loadGemini(mode, targetWin) {
+    if (!targetWin || targetWin.isDestroyed()) return;
+
+    targetWin.appMode = mode;
+    const GEMINI_URL = 'https://gemini.google.com/app';
+    const AISTUDIO_URL = 'https://aistudio.google.com/';
+    const url = mode === 'aistudio' ? AISTUDIO_URL : GEMINI_URL;
+    
+    let loginWin = null;
+    const createAndManageLoginWindow = async (loginUrl) => { // הוספנו async
+        if (loginWin && !loginWin.isDestroyed()) {
+            loginWin.focus();
+            return;
+        }
+
+        loginWin = new BrowserWindow({
+            width: 700,
+            height: 780,
+            frame: true,
+            autoHideMenuBar: true,
+            alwaysOnTop: true,
+            webPreferences: {
+                preload: path.join(__dirname, 'preload.js'),
+                nodeIntegration: false,
+                contextIsolation: true,
+                userAgent: STABLE_USER_AGENT
+            }
+        });
+
+        // --- התיקון המרכזי מתחיל כאן ---
+        // נקה את כל נתוני הסשן של חלון ההתחברות לפני כל שימוש
+        // כדי להבטיח התחברות "נקייה" בכל פעם.
+        try {
+            await loginWin.webContents.session.clearStorageData({
+                storages: ['cookies', 'localstorage'],
+                // נקה נתונים עבור כל הדומיינים של גוגל כדי להיות בטוחים
+                origins: ['https://accounts.google.com', 'https://google.com'] 
+            });
+            console.log('Login window session cleared for a fresh login attempt.');
+        } catch (error) {
+            console.error('Failed to clear login window session storage:', error);
+        }
+        // --- סוף התיקון ---
+
+        loginSaver.attachToView(loginWin);
+        loginWin.loadURL(loginUrl);
+
+        loginWin.on('closed', () => {
+            loginWin = null;
+        });
+
+        loginWin.webContents.on('did-navigate', async (event, navigatedUrl) => {
+            const isLoginSuccess = navigatedUrl.startsWith(GEMINI_URL) || navigatedUrl.startsWith(AISTUDIO_URL);
+            
+            if (isLoginSuccess) {
+                console.log('Login successful in isolated window. Transferring session...');
+                
+                try {
+                    const isolatedSession = loginWin.webContents.session;
+                    const mainSession = session.fromPartition(SESSION_PARTITION);
+                    const googleCookies = await isolatedSession.cookies.get({ domain: '.google.com' });
+
+                    if (googleCookies.length === 0) {
+                        console.warn("Login successful, but no cookies found to transfer.");
+                    } else {
+                        let successfulTransfers = 0;
+                        for (const cookie of googleCookies) {
+try {
+    const cookieUrl = `https://${cookie.domain.startsWith('.') ? 'www' : ''}${cookie.domain}${cookie.path}`;
+
+    const newCookie = {
+        url: cookieUrl,
+        name: cookie.name,
+        value: cookie.value,
+        path: cookie.path,
+        secure: cookie.secure,
+        httpOnly: cookie.httpOnly,
+        expirationDate: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60),
+        session: false,
+        sameSite: cookie.sameSite
+    };
+
+    // --- התיקון המרכזי מתחיל כאן ---
+    // אם זו *לא* עוגיית __Host-, הגדר את הדומיין כרגיל
+    if (!cookie.name.startsWith('__Host-')) {
+        newCookie.domain = cookie.domain;
+    }
+    // אם זו *כן* עוגיית __Host-, אל תגדיר דומיין כלל. 
+    // Electron יגדיר אותו אוטומטית לפי ה-URL, ויעמוד בכללים.
+    // --- סוף התיקון ---
+
+    await mainSession.cookies.set(newCookie);
+    successfulTransfers++;
+} catch (cookieError) {
+    console.warn(`Could not transfer cookie "${cookie.name}": ${cookieError.message}`);
 }
 
+                        }
+                        console.log(`${successfulTransfers}/${googleCookies.length} cookies transferred successfully.`);
+                    }
+
+                    if (loginWin && !loginWin.isDestroyed()) {
+                        loginWin.close();
+                    }
+                    
+                    BrowserWindow.getAllWindows().forEach(win => {
+                        if (win && !win.isDestroyed() && (!loginWin || win.id !== loginWin.id)) {
+                            const view = win.getBrowserView();
+                            if (view && view.webContents && !view.webContents.isDestroyed()) {
+                                console.log(`Reloading view for window ID: ${win.id}`);
+                                view.webContents.reload();
+                            }
+                        }
+                    });
+
+                } catch (error) {
+                    console.error('A critical error occurred during the session transfer process:', error);
+                }
+            }
+        });
+    };
+
+    // --- הגדרת החלון הראשי (נשאר כפי שהיה) ---
+    const existingView = targetWin.getBrowserView();
+    if (existingView) {
+        existingView.webContents.loadURL(url);
+        return;
+    }
+
+    targetWin.loadFile('drag.html');
+
+    const newView = new BrowserView({
+        webPreferences: {
+            partition: SESSION_PARTITION, // הוא חייב להישאר עם partition כדי לשמור את הסשן
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nativeWindowOpen: true
+        }
+    });
+
+    // יירוט ניתובים ופופ-אפים שקורא לפונקציה שיוצרת את החלון החיצוני
+    newView.webContents.setWindowOpenHandler(({ url: popupUrl }) => {
+        const isGoogleLogin = /^https:\/\/accounts\.google\.com\//.test(popupUrl);
+        if (isGoogleLogin) {
+            createAndManageLoginWindow(popupUrl);
+            return { action: 'deny' }; 
+        }
+        shell.openExternal(popupUrl);
+        return { action: 'deny' };
+    });
+    newView.webContents.on('will-navigate', async (event, navigationUrl) => {
+        const isGoogleAccountUrl = /^https:\/\/accounts\.google\.com\//.test(navigationUrl);
+
+        if (isGoogleAccountUrl) {
+            // ירט תמיד את הניווט כדי שנוכל לטפל בו בעצמנו
+            event.preventDefault();
+
+            // בדוק אם זו כתובת התנתקות (היא בדרך כלל מכילה 'Logout')
+            const isSignOutUrl = navigationUrl.includes('/Logout');
+
+            if (isSignOutUrl) {
+                // --- טיפול בהתנתקות ---
+                console.log('Sign-out detected. Clearing main application session...');
+                try {
+                    const mainSession = session.fromPartition(SESSION_PARTITION);
+                    // נקה את כל העוגיות והאחסון של הסשן הראשי
+                    await mainSession.clearStorageData({ storages: ['cookies', 'localstorage'] });
+                    console.log('Main session cleared. Reloading the view to show logged-out state.');
+
+                    // רענן את התצוגה כדי להציג את מסך ההתחברות של Gemini
+                    if (newView && !newView.webContents.isDestroyed()) {
+                        newView.webContents.reload();
+                    }
+                } catch (error) {
+                    console.error('Failed to clear main session on sign-out:', error);
+                }
+            } else {
+                // --- טיפול בהתחברות או הוספת חשבון ---
+                // זה המצב הרגיל של פתיחת חלון חיצוני
+                console.log('Sign-in or Add Account detected. Opening isolated login window.');
+                await createAndManageLoginWindow(navigationUrl);
+            }
+        } else if (navigationUrl.startsWith('file://')) {
+            event.preventDefault();
+        }
+    });
+    
+    // שאר הקוד של הפונקציה
+    newView.webContents.on('found-in-page', (event, result) => {
+        if (event.sender && !event.sender.isDestroyed()) {
+            event.sender.send('find-in-page-result', result);
+        }
+    });
+
+    newView.webContents.loadURL(url);
+    
+    targetWin.setBrowserView(newView);
+    
+    const bounds = targetWin.getBounds();
+    newView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
+    newView.setAutoResize({ width: true, height: true });
+    
+    loginSaver.attachToView(newView);
+
+    if (!settings.shortcutsGlobal) {
+        const localShortcuts = { ...settings.shortcuts };
+        delete localShortcuts.showHide;
+        const sendShortcuts = () => {
+            if (!settings.shortcutsGlobal && newView.webContents && !newView.webContents.isDestroyed()) {
+                newView.webContents.send('set-local-shortcuts', localShortcuts);
+            }
+        };
+        sendShortcuts();
+        newView.webContents.on('did-finish-load', sendShortcuts);
+    }
 }
 // ================================================================= //
 // Animation and Resizing Functions (Unchanged from original)
@@ -1072,6 +1295,18 @@ if (process.platform === 'win32') {
         }
     }
 }
+ipcMain.on('select-app-mode', (event, mode) => {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    if (senderWindow && !senderWindow.isDestroyed()) {
+        // --- שחזור גודל החלון המקורי ---
+        senderWindow.setResizable(true); // אפשר שינוי גודל מחדש
+        senderWindow.setBounds(originalSize);
+        senderWindow.center();
+        // ------------------------------------
+
+        loadGemini(mode, senderWindow);
+    }
+});
 ipcMain.on('toggle-full-screen', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win && !win.isDestroyed()) {
@@ -1157,13 +1392,10 @@ ipcMain.on('theme:set', (event, newTheme) => {
 
 app.whenReady().then(() => {
   syncThemeWithWebsite(settings.theme);
-  createWindow();
+    createWindow();
   const gemSession = session.fromPartition(SESSION_PARTITION);
 
-// Optional: keep UA consistent on the session (not per-view)
-gemSession.setUserAgent(
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-);
+gemSession.setUserAgent(REAL_CHROME_UA);
 const sendPing = async () => {
     try {
         await fetch('https://latex-v25b.onrender.com/ping-stats', { // ודא שזו כתובת ה-worker שלך
@@ -1247,7 +1479,19 @@ app.on('will-quit', () => {
 app.on('window-all-closed', () => {
   app.quit();
 });
-
+app.on('before-quit', async () => {
+  try {
+    const s = session.fromPartition(SESSION_PARTITION); // persist:gemini-session
+    if (s && s.cookies && typeof s.cookies.flushStore === 'function') {
+      await s.cookies.flushStore();
+    } else if (s && typeof s.flushStorageData === 'function') {
+      // גרסאות Electron ישנות יותר
+      await s.flushStorageData();
+    }
+  } catch (e) {
+    console.error('Failed to flush cookies store:', e);
+  }
+});
 ipcMain.on('check-for-updates', () => {
   openUpdateWindowAndCheck();
 });
