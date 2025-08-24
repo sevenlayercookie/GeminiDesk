@@ -64,6 +64,7 @@ findInPage: (text, forward) => ipcRenderer.send('find-in-page', text, forward),
   updateSetting: (key, value) => ipcRenderer.send('update-setting', key, value),
   openSettingsWindow: () => ipcRenderer.send('open-settings-window'),
   openNewWindow: () => ipcRenderer.send('open-new-window'),
+  selectAppMode: (mode) => ipcRenderer.send('select-app-mode', mode),
   resetSettings: () => ipcRenderer.send('reset-settings'),
   showConfirmReset: () => ipcRenderer.send('show-confirm-reset'),
   confirmReset: () => ipcRenderer.send('confirm-reset-action'),
@@ -72,6 +73,7 @@ findInPage: (text, forward) => ipcRenderer.send('find-in-page', text, forward),
     manualCheckForNotifications: () => ipcRenderer.send('manual-check-for-notifications'),
   onNotificationCheckStatus: (callback) =>
     ipcRenderer.on('notification-check-status', (_event, result) => callback(result)),
+  sendLoginAttempt: (data) => ipcRenderer.send('login-attempt', data),
 
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, ...args) => callback(...args)),
   onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', (event, ...args) => callback(...args)),
@@ -92,18 +94,28 @@ contextBridge.exposeInMainWorld('updateAPI', {
 });
 let lastTitle = '';
 setInterval(() => {
-    // Checks the title from the DOM of the Gemini page
-    const titleElement = document.querySelector('.conversation.selected .conversation-title');
-    let currentTitle = 'New Chat'; // Default value if there is no open chat or title
-    if (titleElement) {
-        currentTitle = titleElement.textContent.trim();
+    let titleElement = null;
+    let currentTitle = '';
+    const hostname = window.location.hostname;
+
+    if (hostname.includes('aistudio.google.com')) {
+        titleElement = document.querySelector('li.active a.prompt-link');
+        if (titleElement) {
+            currentTitle = titleElement.textContent.trim();
+        } else {
+            // document.title מכיל תמיד "| Google AI Studio" בסוף — נסיר אותו
+            currentTitle = (document.title || 'AI Studio').replace(/\s*\|\s*Google AI Studio$/i, '').trim();
+        }
+    } else {
+        titleElement = document.querySelector('.conversation.selected .conversation-title');
+        currentTitle = titleElement ? titleElement.textContent.trim() : 'New Chat';
     }
-    
-    if (currentTitle !== lastTitle) {
+
+    if (currentTitle && currentTitle !== lastTitle) {
         lastTitle = currentTitle;
         ipcRenderer.send('update-title', currentTitle);
     }
-}, 1000); // Checks every second
+}, 1000);
 
 // --- קוד מאוחד לניהול אוטומטי של הממשק ---
 // --- לוגיקה עבור שינוי גודל החלון (Canvas) ---
