@@ -73,7 +73,6 @@ findInPage: (text, forward) => ipcRenderer.send('find-in-page', text, forward),
     manualCheckForNotifications: () => ipcRenderer.send('manual-check-for-notifications'),
   onNotificationCheckStatus: (callback) =>
     ipcRenderer.on('notification-check-status', (_event, result) => callback(result)),
-  sendLoginAttempt: (data) => ipcRenderer.send('login-attempt', data),
 
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, ...args) => callback(...args)),
   onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', (event, ...args) => callback(...args)),
