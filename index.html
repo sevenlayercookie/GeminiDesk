@@ -20,6 +20,54 @@
         }
 
         /* ------------------- */
+        /* --- Screenshots Section --- */
+        /* ------------------- */
+        .screenshot-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .screenshot-item {
+            display: block;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+            position: relative;
+            aspect-ratio: 16 / 9; /* Maintain aspect ratio */
+        }
+
+        .screenshot-item:hover {
+            transform: translateY(-10px) scale(1.03);
+            box-shadow: 0 16px 40px 0 var(--shadow-color);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .screenshot-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .screenshot-item.placeholder {
+            background: var(--card-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 1.1rem;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
+        .screenshot-item.placeholder span {
+            padding: 1rem;
+        }
+
+        /* ------------------- */
         /* --- Variables & Theme --- */
         /* ------------------- */
         :root {
@@ -431,6 +479,7 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             position: relative;
+            overflow-x: auto;
         }
         
         table {
@@ -646,7 +695,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.5A4.5 4.5 0 0 0 17.5 5c-.5 0-1 .5-1.5.5-1.5 0-2.75-1.06-4-1.06-3 0-6 8-6 12.5A4.5 4.5 0 0 0 6.5 19c.5 0 1-.5 1.5-.5Z"/></svg>
                         Your Keys, Your Kingdom
                     </h3>
-                    <p>Don't like our default hotkeys? No problem! Dive into the settings and remap every single shortcut to fit your unique, beautiful, and probably weird workflow.</p>
+                    <p>Don't like our defaults? Remap every shortcut in the settings. Choose whether shortcuts work globally (from any app) or only when GeminiDesk is active for a truly custom workflow.</p>
                 </div>
                  <div class="feature-card animate-on-scroll">
                     <h3>
@@ -697,6 +746,39 @@
                     </h3>
                     <p>Go big with a dedicated fullscreen mode. The sleek, draggable header bar even shows your current chat's title, so you always know what you're working on.</p>
                 </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
+                        Dual AI Engines: Gemini & AI Studio
+                    </h3>
+                    <p>Switch between the standard Gemini App for conversational chat and the powerful <strong>AI Studio</strong> for advanced prompt engineering and development, right from the startup screen.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6l4 4v10a2 2 0 0 1-2 2z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h2"/><circle cx="15.5" cy="15.5" r="2.5"/><path d="M17 17l-1.5-1.5"/></svg>
+                        Find In Page
+                    </h3>
+                    <p>Never lose your train of thought again. Use the built-in Find in Page (<code>Ctrl+F</code>) to instantly locate specific text within your current conversation. Perfect for long chats.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="screenshots">
+            <h2 class="animate-on-scroll">📸 App in Action</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">A glimpse into the clean and powerful interface of GeminiDesk.</p>
+            <div class="screenshot-gallery animate-on-scroll">
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot1.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot1.png" alt="Screenshot 1"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot2.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot2.png" alt="Screenshot 2"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot3.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot3.png" alt="Screenshot 3"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot4.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot4.png" alt="Screenshot 4"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot5.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot5.png" alt="Screenshot 5"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot6.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot6.png" alt="Screenshot 6"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot7.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot7.png" alt="Screenshot 7"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot8.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot8.png" alt="Screenshot 8"></a>
+                <div class="screenshot-item placeholder"><span>New Screenshot<br>Coming Soon</span></div>
+                <div class="screenshot-item placeholder"><span>New Screenshot<br>Coming Soon</span></div>
+                <div class="screenshot-item placeholder"><span>New Screenshot<br>Coming Soon</span></div>
+                <div class="screenshot-item placeholder"><span>New Screenshot<br>Coming Soon</span></div>
             </div>
         </section>
 
@@ -713,14 +795,16 @@
                     </thead>
                     <tbody>
                         <tr><td><code>Alt</code> + <code>G</code></td><td>Toggle App Visibility (Show / Hide)</td></tr>
-                        <tr><td><code>Alt</code> + <code>N</code></td><td><strong>Open a New Window</strong></td></tr>
-                        <tr><td><code>Alt</code> + <code>S</code></td><td><strong>Search Chats Instantly</strong></td></tr>
-                        <tr><td><code>Control</code> + <code>Alt</code> + <code>S</code></td><td><strong>Capture Screenshot</strong> & Paste into Chat</td></tr>
+                        <tr><td><code>Alt</code> + <code>N</code></td><td>Open a New Window</td></tr>
+                        <tr><td><code>Alt</code> + <code>S</code></td><td>Search Chats Instantly</td></tr>
+                        <tr><td><code>Ctrl</code> + <code>F</code></td><td>Find Text in Current Page</td></tr>
+                        <tr><td><code>Ctrl</code> + <code>Alt</code> + <code>S</code></td><td>Capture Screenshot & Paste into Chat</td></tr>
                         <tr><td><code>Alt</code> + <code>P</code></td><td>New Chat with <strong>Pro</strong> Model</td></tr>
                         <tr><td><code>Alt</code> + <code>F</code></td><td>New Chat with <strong>Flash</strong> Model</td></tr>
-                        <tr><td><code>Alt</code> + <code>R</code></td><td><strong>Refresh the active View</strong></td></tr>
+                        <tr><td><code>Alt</code> + <code>R</code></td><td>Refresh the Active View</td></tr>
                         <tr><td><code>Alt</code> + <code>I</code></td><td>Show Instructions / Onboarding Screen</td></tr>
-                        <tr><td><code>Alt</code> + <code>Q</code></td><td>Quit Application (The "I'm Done" Button)</td></tr>
+                        <tr><td><code>Alt</code> + <code>Q</code></td><td>Close Current Window</td></tr>
+                        <tr><td><code>Ctrl</code> + <code>W</code></td><td>Quit Application</td></tr>
                     </tbody>
                 </table>
             </div>
