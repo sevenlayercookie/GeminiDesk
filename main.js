@@ -13,6 +13,7 @@ const Store = require('electron-store');
 const os = require('os');
 const crypto = require('crypto');
 const fetch = require('node-fetch');
+const { marked } = require('marked');
 let confirmWin = null;
 let isQuitting = false;
 let updateWin = null;
@@ -1551,38 +1552,43 @@ autoUpdater.on('checking-for-update', () => {
   sendUpdateStatus('checking');
 });
 
-autoUpdater.on('update-available', async (info) => {
+autoUpdater.on('update-available', (info) => {
     if (!updateWin) {
         // אם החלון לא נפתח ידנית, פתח אותו עכשיו (למקרה של בדיקה אוטומטית)
         openUpdateWindowAndCheck();
         return; // הפונקציה תקרא לעצמה שוב אחרי שהחלון יהיה מוכן
     }
 
-    try {
-        const { marked } = await import('marked');
-        const options = { hostname: 'api.github.com', path: '/repos/hillelkingqt/GeminiDesk/releases/latest', method: 'GET', headers: { 'User-Agent': 'GeminiDesk-App' }};
-        const req = https.request(options, (res) => {
-            let data = '';
-            res.on('data', (chunk) => { data += chunk; });
-            res.on('end', () => {
-                let releaseNotesHTML = '<p>Could not load release notes.</p>';
-                try {
-                    const releaseInfo = JSON.parse(data);
-                    if (releaseInfo.body) { releaseNotesHTML = marked.parse(releaseInfo.body); }
-                } catch (e) { console.error('Failed to parse release notes JSON:', e); }
-
-                if (updateWin) {
-                    updateWin.webContents.send('update-info', {
-                        status: 'update-available',
-                        version: info.version,
-                        releaseNotesHTML: releaseNotesHTML
-                    });
+    const options = { hostname: 'api.github.com', path: '/repos/hillelkingqt/GeminiDesk/releases/latest', method: 'GET', headers: { 'User-Agent': 'GeminiDesk-App' }};
+    const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', async () => {
+            let releaseNotesHTML = '<p>Could not load release notes.</p>';
+            try {
+                const releaseInfo = JSON.parse(data);
+                if (releaseInfo.body) {
+                    releaseNotesHTML = await marked.parse(releaseInfo.body);
                 }
-            });
+            } catch (e) {
+                console.error('Failed to parse release notes JSON:', e);
+            }
+
+            if (updateWin && !updateWin.isDestroyed()) {
+                updateWin.webContents.send('update-info', {
+                    status: 'update-available',
+                    version: info.version,
+                    releaseNotesHTML: releaseNotesHTML
+                });
+            }
         });
-        req.on('error', (e) => { if (updateWin) { updateWin.webContents.send('update-info', { status: 'error', message: e.message }); } });
-        req.end();
-    } catch (importError) { if (updateWin) { updateWin.webContents.send('update-info', { status: 'error', message: 'Failed to load modules.' }); } }
+    });
+    req.on('error', (e) => {
+        if (updateWin && !updateWin.isDestroyed()) {
+            updateWin.webContents.send('update-info', { status: 'error', message: e.message });
+        }
+    });
+    req.end();
 });
 
 // החלף את המאזין הקיים של 'update-not-available' בזה:
