@@ -69,6 +69,52 @@ GeminiDesk is more than a wrapper. It's a command center, loaded with features t
 
 ---
 
+## 📸 Screenshots 📸
+
+<table width="100%">
+  <tr>
+    <td align="center" valign="top">
+      <p><strong>Clean, multi-lingual UI with automatic theme switching</strong></p>
+      <img src="screenshots/screenshot1.png" alt="Main interface showing a clean layout in dark mode, with UI elements in a non-English language, demonstrating localization." width="95%">
+    </td>
+    <td align="center" valign="top">
+      <p><strong>Extensive settings to customize every feature</strong></p>
+      <img src="screenshots/screenshot2.png" alt="Settings panel with numerous options for hotkeys, appearance, and behavior." width="95%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <p><strong>Full hotkey customization for power users</strong></p>
+      <img src="screenshots/screenshot3.png" alt="Hotkey customization screen allowing users to remap all keyboard shortcuts." width="95%">
+    </td>
+    <td align="center" valign="top">
+      <p><strong>Draggable toolbar for a personalized workflow</strong></p>
+      <img src="screenshots/screenshot4.png" alt="Demonstration of the main toolbar buttons being reordered via drag-and-drop." width="95%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <p><strong>Instant screenshot capture to chat</strong></p>
+      <img src="screenshots/screenshot5.png" alt="A screenshot being captured and appearing within the chat input box, ready to be sent." width="95%">
+    </td>
+    <td align="center" valign="top">
+      <p><strong>Seamless drag-and-drop file uploads</strong></p>
+      <img src="screenshots/screenshot6.png" alt="A file being dragged over the application window, which highlights to indicate it's ready to accept the file." width="95%">
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <p><strong>Multi-window support for parallel conversations</strong></p>
+      <img src="screenshots/screenshot7.png" alt="Multiple chat windows open on a desktop, showcasing the ability to handle several conversations at once." width="95%">
+    </td>
+    <td align="center" valign="top">
+      <p><strong>Enhanced notification center</strong></p>
+      <img src="screenshots/screenshot8.png" alt="The notification viewer displaying multiple messages in a clean, navigable carousel format." width="95%">
+    </td>
+  </tr>
+</table>
+---
+
 ## ⌨️ The Secret Handshakes (Default Shortcuts)
 
 Access the magic from anywhere in your OS. (Remember, you can change ALL of these in the settings!)
