@@ -1,7 +1,10 @@
 const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, dialog, screen, shell, session, nativeTheme } = require('electron');
+app.disableHardwareAcceleration();
+const { fork } = require('child_process');
 const REAL_CHROME_UA =
   `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
-    const STABLE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36';
+const STABLE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const translations = require('./translations.js');
 const { autoUpdater } = require('electron-updater');
 const AutoLaunch = require('auto-launch');
 const path = require('path');
@@ -13,15 +16,14 @@ const Store = require('electron-store');
 const os = require('os');
 const crypto = require('crypto');
 const fetch = require('node-fetch');
-const { marked } = require('marked');
 let confirmWin = null;
 let isQuitting = false;
 let updateWin = null;
 let downloadWin = null;
 let notificationWin = null;
+let personalMessageWin = null;
 let lastFetchedMessageId = null;
 let lastFocusedWindow = null;
-const loginSaver = require('./save.js');
 const execPath = process.execPath;
 // Allow third-party/partitioned cookies used by Google Sign-In
 app.commandLine.appendSwitch('enable-features', 'ThirdPartyStoragePartitioning');
@@ -70,14 +72,22 @@ const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 let settingsWin = null;
 const defaultSettings = {
   onboardingShown: false,
-  defaultMode: 'ask', 
+  defaultMode: 'ask',
   autoStart: false,
   alwaysOnTop: true,
-  lastShownNotificationId: null, 
+  lastShownNotificationId: null,
   lastMessageData: null,
   autoCheckNotifications: true,
   enableCanvasResizing: true,
   shortcutsGlobal: true,
+  showChatTitle: true,
+  language: 'en',
+  showCloseButton: false,
+  showExportButton: false,
+  draggableButtonsEnabled: true,
+  buttonOrder: [],
+  restoreWindows: false,
+  savedWindows: [],
   shortcuts: {
     showHide: isMac ? 'Command+G' : 'Alt+G', // ← דוגמה לתיקון
     quit: isMac ? 'Command+Q' : 'Control+W',
@@ -308,12 +318,19 @@ function getSettings() {
   try {
     if (fs.existsSync(settingsPath)) {
       const savedSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      return { ...defaultSettings, ...savedSettings, shortcuts: { ...defaultSettings.shortcuts, ...savedSettings.shortcuts } };
+      // Ensure new settings have a default value if not present
+      const combinedSettings = {
+          ...defaultSettings,
+          ...savedSettings,
+          shortcuts: { ...defaultSettings.shortcuts, ...savedSettings.shortcuts },
+          showInTaskbar: savedSettings.showInTaskbar === undefined ? false : savedSettings.showInTaskbar
+      };
+      return { ...combinedSettings, translations };
     }
   } catch (e) {
     console.error("Couldn't read settings, falling back to default.", e);
   }
-  return defaultSettings;
+  return { ...defaultSettings, translations };
 }
 function createNotificationWindow() {
   if (notificationWin) {
@@ -356,13 +373,11 @@ function sendToNotificationWindow(data) {
 }
 
 async function checkForNotifications(isManualCheck = false) {
-  // If this is a manual check (button click), make sure the window exists.
   if (isManualCheck) {
     createNotificationWindow();
     if (!notificationWin) return;
   }
 
-  // Ensure we only send to the renderer AFTER the notification window is ready.
   const sendToNotificationWindow = (data) => {
     if (!notificationWin || notificationWin.isDestroyed()) return;
     const wc = notificationWin.webContents;
@@ -378,40 +393,34 @@ async function checkForNotifications(isManualCheck = false) {
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
-    // Avoid cached responses so "no new message" vs. "new message" is always fresh.
-    const response = await fetch('https://latex-v25b.onrender.com/latest-message', {
+    const response = await fetch('https://latex-v25b.onrender.com/latest-messages', {
       cache: 'no-cache',
       signal: controller.signal
     });
     clearTimeout(timeoutId);
 
-    // Treat 404 as "no messages on server", anything else non-OK as an error.
     if (!response.ok && response.status !== 404) {
       throw new Error(`Server error: ${response.status}`);
     }
 
-    const messageData = response.status === 404 ? {} : await response.json();
+    const messages = response.status === 404 ? [] : await response.json();
 
-    // If the server returned a message with an id
-    if (messageData && messageData.id) {
-      if (messageData.id !== settings.lastShownNotificationId) {
-        // --- New notification found ---
-        console.log(`New notification found: ID ${messageData.id}`);
-        settings.lastShownNotificationId = messageData.id;
-        settings.lastMessageData = messageData;
+    if (messages.length > 0) {
+      const latestMessage = messages[0];
+      if (latestMessage.id !== settings.lastShownNotificationId) {
+        console.log(`New notification found: ID ${latestMessage.id}`);
+        settings.lastShownNotificationId = latestMessage.id;
+        // We don't save the whole array in settings, just the ID of the newest one we've shown.
         saveSettings(settings);
 
         if (!notificationWin) createNotificationWindow();
-        sendToNotificationWindow({ status: 'found', content: messageData });
+        sendToNotificationWindow({ status: 'found', content: messages });
       } else if (isManualCheck) {
-        // --- Same message as last time; no new notifications ---
-        sendToNotificationWindow({ status: 'no-new-message' });
+        sendToNotificationWindow({ status: 'no-new-message', content: messages });
       }
     } else {
-      // --- No message exists on the server (deleted/none) ---
-      console.log('No message found on server. Clearing local cache.');
+      console.log('No messages found on server. Clearing local cache.');
       settings.lastShownNotificationId = null;
-      settings.lastMessageData = null;
       saveSettings(settings);
 
       if (isManualCheck) {
@@ -481,47 +490,51 @@ function registerShortcuts() {
     const shortcuts = settings.shortcuts;
 
     // Register show/hide shortcut regardless of global settings
-    if (shortcuts.showHide) {
-        globalShortcut.register(shortcuts.showHide, () => {
-            const allWindows = BrowserWindow.getAllWindows();
-            if (allWindows.length === 0) return;
+if (shortcuts.showHide) {
+  globalShortcut.register(shortcuts.showHide, () => {
+    const allWindows = BrowserWindow.getAllWindows();
 
-            const shouldShow = allWindows.some(win => !win.isVisible());
+    // חדש: סינון חלונות פנימיים (כמו חלון הסקרייפ)
+    const userWindows = allWindows.filter(w => !w.__internal);
 
-            if (!shouldShow) {
-                isUserTogglingHide = true;
-                setTimeout(() => { isUserTogglingHide = false; }, 500);
-            }
+    if (userWindows.length === 0) return;
 
-            allWindows.forEach(win => {
-                if (shouldShow) {
-                    if (win.isMinimized()) win.restore();
-                    win.show();
-                } else {
-                    win.hide();
-                }
-            });
+    const shouldShow = userWindows.some(win => !win.isVisible());
 
-            if (shouldShow) {
-                const focused = allWindows.find(w => w.isFocused());
-                if (focused) {
-                    lastFocusedWindow = focused;
-                } else if (!lastFocusedWindow || lastFocusedWindow.isDestroyed()) {
-                    lastFocusedWindow = allWindows[0];
-                }
-                
-                if (lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
-                    setTimeout(() => {
-                        forceOnTop(lastFocusedWindow);
-                        const view = lastFocusedWindow.getBrowserView();
-                        if (view && view.webContents && !view.webContents.isDestroyed()) {
-                            view.webContents.focus();
-                        }
-                    }, 100);
-                }
-            }
-        });
+    if (!shouldShow) {
+      isUserTogglingHide = true;
+      setTimeout(() => { isUserTogglingHide = false; }, 500);
     }
+
+    userWindows.forEach(win => {
+      if (shouldShow) {
+        if (win.isMinimized()) win.restore();
+        win.show();
+      } else {
+        win.hide();
+      }
+    });
+
+    if (shouldShow) {
+      // החזרת הפוקוס/AlwaysOnTop רק על חלון “אמיתי” של המשתמש
+      const focused = userWindows.find(w => w.isFocused());
+      lastFocusedWindow = (focused && !focused.isDestroyed())
+        ? focused
+        : (userWindows[0] || null);
+
+      if (lastFocusedWindow && !lastFocusedWindow.isDestroyed()) {
+        setTimeout(() => {
+          forceOnTop(lastFocusedWindow);
+          const view = lastFocusedWindow.getBrowserView();
+          if (view && view.webContents && !view.webContents.isDestroyed()) {
+            view.webContents.focus();
+          }
+        }, 100);
+      }
+    }
+  });
+}
+
 
     // Prepare local shortcuts, excluding the one that's always global
     const localShortcuts = { ...settings.shortcuts };
@@ -768,11 +781,11 @@ ipcMain.on('execute-shortcut', (event, action) => {
     }
 });
 
-function createWindow() {
+function createWindow(state = null) {
     const newWin = new BrowserWindow({
         width: originalSize.width,
         height: originalSize.height,
-        skipTaskbar: true,
+        skipTaskbar: !settings.showInTaskbar,
         frame: false,
         backgroundColor: '#1E1E1E', // <--- הוסף את השורה הזו
         alwaysOnTop: settings.alwaysOnTop,
@@ -840,143 +853,159 @@ function createWindow() {
         detachedViews.delete(newWin);
     });
 
-    if (!settings.onboardingShown) {
+if (state) {
+    // שחזור מצב החלון
+    if (state.bounds) newWin.setBounds(state.bounds);
+    
+    // טעינת Gemini עם ה-URL המשוחזר
+    loadGemini(state.mode || settings.defaultMode, newWin, state.url);
+    
+    // אם יש URL ספציפי, זה אומר שזה צ'אט קיים שצריך לשחזר את הכותרת שלו
+    if (state.url && state.url !== 'https://gemini.google.com/app' && state.url !== 'https://aistudio.google.com/') {
+        console.log('Restoring window with specific chat URL:', state.url);
+    }
+} else if (!settings.onboardingShown) {
         newWin.loadFile('onboarding.html');
     } else if (settings.defaultMode === 'ask') {
-        // טען את מסך הבחירה
         newWin.loadFile('choice.html');
-        
-        // הגדר גודל מיוחד וקטן יותר למסך הבחירה כפי שביקשת
         const choiceSize = { width: 500, height: 450 };
-        newWin.setResizable(false); // ננעל את הגודל זמנית
-        newWin.setBounds(choiceSize);
+        newWin.setResizable(false);
+        newWin.setSize(choiceSize.width, choiceSize.height);
         newWin.center();
     } else {
-        // טען ישירות את האפליקציה שהמשתמש בחר כברירת מחדל
         loadGemini(settings.defaultMode, newWin);
     }
+    return newWin; // <--- הוסף את השורה הזאת בסוף הפונקציה
 }
-function loadGemini(mode, targetWin) {
+
+function loadGemini(mode, targetWin, initialUrl) {
     if (!targetWin || targetWin.isDestroyed()) return;
 
     targetWin.appMode = mode;
     const GEMINI_URL = 'https://gemini.google.com/app';
     const AISTUDIO_URL = 'https://aistudio.google.com/';
-    const url = mode === 'aistudio' ? AISTUDIO_URL : GEMINI_URL;
+    const url = initialUrl || (mode === 'aistudio' ? AISTUDIO_URL : GEMINI_URL);
     
     let loginWin = null;
-    const createAndManageLoginWindow = async (loginUrl) => { // הוספנו async
-        if (loginWin && !loginWin.isDestroyed()) {
-            loginWin.focus();
-            return;
-        }
-
-        loginWin = new BrowserWindow({
-            width: 700,
-            height: 780,
-            frame: true,
-            autoHideMenuBar: true,
-            alwaysOnTop: true,
-            webPreferences: {
-                preload: path.join(__dirname, 'preload.js'),
-                nodeIntegration: false,
-                contextIsolation: true,
-                userAgent: STABLE_USER_AGENT
-            }
-        });
-
-        // --- התיקון המרכזי מתחיל כאן ---
-        // נקה את כל נתוני הסשן של חלון ההתחברות לפני כל שימוש
-        // כדי להבטיח התחברות "נקייה" בכל פעם.
-        try {
-            await loginWin.webContents.session.clearStorageData({
-                storages: ['cookies', 'localstorage'],
-                // נקה נתונים עבור כל הדומיינים של גוגל כדי להיות בטוחים
-                origins: ['https://accounts.google.com', 'https://google.com'] 
-            });
-            console.log('Login window session cleared for a fresh login attempt.');
-        } catch (error) {
-            console.error('Failed to clear login window session storage:', error);
-        }
-        // --- סוף התיקון ---
-
-        loginSaver.attachToView(loginWin);
-        loginWin.loadURL(loginUrl);
-
-        loginWin.on('closed', () => {
-            loginWin = null;
-        });
-
-        loginWin.webContents.on('did-navigate', async (event, navigatedUrl) => {
-            const isLoginSuccess = navigatedUrl.startsWith(GEMINI_URL) || navigatedUrl.startsWith(AISTUDIO_URL);
-            
-            if (isLoginSuccess) {
-                console.log('Login successful in isolated window. Transferring session...');
-                
-                try {
-                    const isolatedSession = loginWin.webContents.session;
-                    const mainSession = session.fromPartition(SESSION_PARTITION);
-                    const googleCookies = await isolatedSession.cookies.get({ domain: '.google.com' });
-
-                    if (googleCookies.length === 0) {
-                        console.warn("Login successful, but no cookies found to transfer.");
-                    } else {
-                        let successfulTransfers = 0;
-                        for (const cookie of googleCookies) {
-try {
-    const cookieUrl = `https://${cookie.domain.startsWith('.') ? 'www' : ''}${cookie.domain}${cookie.path}`;
-
-    const newCookie = {
-        url: cookieUrl,
-        name: cookie.name,
-        value: cookie.value,
-        path: cookie.path,
-        secure: cookie.secure,
-        httpOnly: cookie.httpOnly,
-        expirationDate: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60),
-        session: false,
-        sameSite: cookie.sameSite
-    };
-
-    // --- התיקון המרכזי מתחיל כאן ---
-    // אם זו *לא* עוגיית __Host-, הגדר את הדומיין כרגיל
-    if (!cookie.name.startsWith('__Host-')) {
-        newCookie.domain = cookie.domain;
+// בקובץ main.js - תקן את הפונקציה createAndManageLoginWindow
+const createAndManageLoginWindow = async (loginUrl) => {
+    if (loginWin && !loginWin.isDestroyed()) {
+        loginWin.focus();
+        return;
     }
-    // אם זו *כן* עוגיית __Host-, אל תגדיר דומיין כלל. 
-    // Electron יגדיר אותו אוטומטית לפי ה-URL, ויעמוד בכללים.
-    // --- סוף התיקון ---
 
-    await mainSession.cookies.set(newCookie);
-    successfulTransfers++;
-} catch (cookieError) {
-    console.warn(`Could not transfer cookie "${cookie.name}": ${cookieError.message}`);
-}
+    loginWin = new BrowserWindow({
+        width: 700,
+        height: 780,
+        frame: true,
+        autoHideMenuBar: true,
+        alwaysOnTop: true,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
+            javascript: true,
+            webSecurity: true,
+            allowRunningInsecureContent: false,
+            experimentalFeatures: false,
+            userAgent: STABLE_USER_AGENT
+        }
+    });
 
-                        }
-                        console.log(`${successfulTransfers}/${googleCookies.length} cookies transferred successfully.`);
-                    }
-
-                    if (loginWin && !loginWin.isDestroyed()) {
-                        loginWin.close();
-                    }
-                    
-                    BrowserWindow.getAllWindows().forEach(win => {
-                        if (win && !win.isDestroyed() && (!loginWin || win.id !== loginWin.id)) {
-                            const view = win.getBrowserView();
-                            if (view && view.webContents && !view.webContents.isDestroyed()) {
-                                console.log(`Reloading view for window ID: ${win.id}`);
-                                view.webContents.reload();
-                            }
-                        }
-                    });
-
-                } catch (error) {
-                    console.error('A critical error occurred during the session transfer process:', error);
-                }
-            }
+    // נקה את כל נתוני הסשן של חלון ההתחברות
+    try {
+        await loginWin.webContents.session.clearStorageData({
+            storages: ['cookies', 'localstorage'],
+            origins: ['https://accounts.google.com', 'https://google.com'] 
         });
-    };
+        console.log('Login window session cleared for a fresh login attempt.');
+    } catch (error) {
+        console.error('Failed to clear login window session storage:', error);
+    }
+
+    // Prevent unexpected new windows during login flow
+    loginWin.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    loginWin.loadURL(loginUrl);
+
+    loginWin.on('closed', () => {
+        loginWin = null;
+    });
+
+    // התיקון המרכזי - רק כאן מטפלים בהעברת העוגיות
+    loginWin.webContents.on('did-navigate', async (event, navigatedUrl) => {
+        const isLoginSuccess = navigatedUrl.startsWith(GEMINI_URL) || navigatedUrl.startsWith(AISTUDIO_URL);
+        
+        if (isLoginSuccess) {
+            console.log('Login successful in isolated window. Transferring session...');
+            
+            try {
+                const isolatedSession = loginWin.webContents.session;
+                const mainSession = session.fromPartition(SESSION_PARTITION);
+                const googleCookies = await isolatedSession.cookies.get({ domain: '.google.com' });
+
+                if (googleCookies.length === 0) {
+                    console.warn("Login successful, but no cookies found to transfer.");
+                } else {
+                    let successfulTransfers = 0;
+                    for (const cookie of googleCookies) {
+                        try {
+                            const cookieUrl = `https://${cookie.domain.startsWith('.') ? 'www' : ''}${cookie.domain}${cookie.path}`;
+
+                            const newCookie = {
+                                url: cookieUrl,
+                                name: cookie.name,
+                                value: cookie.value,
+                                path: cookie.path,
+                                secure: cookie.secure,
+                                httpOnly: cookie.httpOnly,
+                                expirationDate: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60),
+                                session: false,
+                                sameSite: cookie.sameSite
+                            };
+
+                            if (!cookie.name.startsWith('__Host-')) {
+                                newCookie.domain = cookie.domain;
+                            }
+
+                            await mainSession.cookies.set(newCookie);
+                            successfulTransfers++;
+                        } catch (cookieError) {
+                            console.warn(`Could not transfer cookie "${cookie.name}": ${cookieError.message}`);
+                        }
+                    }
+                    console.log(`${successfulTransfers}/${googleCookies.length} cookies transferred successfully.`);
+                }
+
+                // Ensure transferred cookies are immediately written to disk
+                try {
+                    await mainSession.cookies.flushStore();
+                } catch (flushErr) {
+                    console.error('Failed to flush cookies store:', flushErr);
+                }
+
+                // סגור את חלון ההתחברות
+                if (loginWin && !loginWin.isDestroyed()) {
+                    loginWin.close();
+                }
+                
+                // רענן את כל החלונות
+                BrowserWindow.getAllWindows().forEach(win => {
+                    if (win && !win.isDestroyed() && (!loginWin || win.id !== loginWin.id)) {
+                        const view = win.getBrowserView();
+                        if (view && view.webContents && !view.webContents.isDestroyed()) {
+                            console.log(`Reloading view for window ID: ${win.id}`);
+                            view.webContents.reload();
+                        }
+                    }
+                });
+
+                // **התיקון המרכזי - שלח הודעה ל-agent רק פה**
+                
+            } catch (error) {
+            }
+        }
+    });
+};
 
     // --- הגדרת החלון הראשי (נשאר כפי שהיה) ---
     const existingView = targetWin.getBrowserView();
@@ -1023,6 +1052,11 @@ try {
                     const mainSession = session.fromPartition(SESSION_PARTITION);
                     // נקה את כל העוגיות והאחסון של הסשן הראשי
                     await mainSession.clearStorageData({ storages: ['cookies', 'localstorage'] });
+                    try {
+                        await mainSession.cookies.flushStore();
+                    } catch (flushErr) {
+                        console.error('Failed to flush cookies store after sign-out:', flushErr);
+                    }
                     console.log('Main session cleared. Reloading the view to show logged-out state.');
 
                     // רענן את התצוגה כדי להציג את מסך ההתחברות של Gemini
@@ -1058,8 +1092,95 @@ try {
     newView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
     newView.setAutoResize({ width: true, height: true });
     
-    loginSaver.attachToView(newView);
-
+if (initialUrl && initialUrl !== GEMINI_URL && initialUrl !== AISTUDIO_URL) {
+// Add this function to main.js to replace the existing waitForTitleAndUpdate
+const waitForTitleAndUpdate = async () => {
+  let attempts = 0;
+  const maxAttempts = 20; 
+  
+  while (attempts < maxAttempts) {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Simpler, more robust script that's less likely to throw errors
+      const title = await newView.webContents.executeJavaScript(`
+        (function() {
+          try {
+            // Simple helper function
+            const text = el => el ? (el.textContent || el.innerText || '').trim() : '';
+            
+            // Try multiple selector strategies, from most specific to most general
+            const selectors = [
+              '.conversation.selected .conversation-title',
+              'li.active a.prompt-link',
+              '[data-test-id="conversation-title"]',
+              'h1.conversation-title',
+              '.conversation-title',
+              '.chat-title',
+              'article h1'
+            ];
+            
+            // Try each selector
+            for (const selector of selectors) {
+              const el = document.querySelector(selector);
+              if (el) {
+                const t = text(el);
+                if (t && t !== 'Gemini' && t !== 'New Chat') return t;
+              }
+            }
+            
+            // Try URL-based extraction as fallback
+            const urlMatch = location.href.match(/\\/chat\\/([^\\/\\?]+)/);
+            if (urlMatch) {
+              return decodeURIComponent(urlMatch[1]).replace(/[-_]/g, ' ');
+            }
+            
+            // Final fallbacks
+            const firstUserMsg = document.querySelector('user-query .query-text');
+            if (firstUserMsg) {
+              const t = text(firstUserMsg);
+              return t.length > 50 ? t.substring(0, 50) + '...' : t;
+            }
+            
+            return document.title || 'Restored Chat';
+          } catch (e) {
+            // Return a safe value if anything goes wrong
+            return 'Restored Chat';
+          }
+        })();
+      `, true);
+      
+      if (title && title.trim() !== '') {
+        console.log('Found chat title after restore:', title);
+        if (!targetWin.isDestroyed()) {
+          targetWin.webContents.send('update-title', title);
+        }
+        break; // Found title, exit loop
+      }
+      
+      attempts++;
+    } catch (e) {
+      console.warn('Failed to read title on attempt', attempts + 1, ':', e.message);
+      attempts++;
+    }
+  }
+  
+  if (attempts >= maxAttempts) {
+    console.log('Could not find chat title after restore, using fallback');
+    if (!targetWin.isDestroyed()) {
+      targetWin.webContents.send('update-title', 'Restored Chat');
+    }
+  }
+};
+  
+  // התחל את התהליך אחרי שהדף נטען
+  newView.webContents.once('did-finish-load', () => {
+    setTimeout(waitForTitleAndUpdate, 1000); // המתנה נוספת לוודא שכל הדינמיקה של Gemini נטענה
+  });
+  
+  // גם מאזין לשינויים בדף (למקרה של SPA navigation)
+  newView.webContents.on('did-navigate-in-page', waitForTitleAndUpdate);
+}
     if (!settings.shortcutsGlobal) {
         const localShortcuts = { ...settings.shortcuts };
         delete localShortcuts.showHide;
@@ -1390,10 +1511,13 @@ ipcMain.on('theme:set', (event, newTheme) => {
 // ================================================================= //
 // App Lifecycle
 // ================================================================= //
-
 app.whenReady().then(() => {
   syncThemeWithWebsite(settings.theme);
-    createWindow();
+    if (settings.restoreWindows && Array.isArray(settings.savedWindows) && settings.savedWindows.length) {
+      settings.savedWindows.forEach(state => createWindow(state));
+    } else {
+      createWindow();
+    }
   const gemSession = session.fromPartition(SESSION_PARTITION);
 
 gemSession.setUserAgent(REAL_CHROME_UA);
@@ -1449,8 +1573,7 @@ sendPing();
   // --- 4. הגדרות מערכת העדכונים האוטומטית ---
   autoUpdater.autoDownload = false;
   autoUpdater.forceDevUpdateConfig = true; // טוב לבדיקות, יכול להישאר
-  if (app.isPackaged) {
-  }
+
   
   // --- 5. הפעלת מערכת הנוטיפיקציות מהשרת ---
   checkForNotifications(); // בצע בדיקה ראשונית אחת מיד עם הפעלת האפליקציה
@@ -1471,7 +1594,22 @@ sendPing();
     }
   }
 });
-
+app.on('before-quit', () => {
+  if (settings.restoreWindows) {
+    const openWindows = BrowserWindow.getAllWindows().filter(w => !w.isDestroyed());
+    settings.savedWindows = openWindows.map(w => {
+      const view = w.getBrowserView();
+      return {
+        url: view && !view.webContents.isDestroyed() ? view.webContents.getURL() : null,
+        bounds: w.getBounds(),
+        mode: w.appMode || settings.defaultMode
+      };
+    });
+  } else {
+    settings.savedWindows = [];
+  }
+  saveSettings(settings);
+});
 app.on('will-quit', () => {
   isQuitting = true; // <-- Add this line
   globalShortcut.unregisterAll();
@@ -1552,43 +1690,38 @@ autoUpdater.on('checking-for-update', () => {
   sendUpdateStatus('checking');
 });
 
-autoUpdater.on('update-available', (info) => {
+autoUpdater.on('update-available', async (info) => {
     if (!updateWin) {
         // אם החלון לא נפתח ידנית, פתח אותו עכשיו (למקרה של בדיקה אוטומטית)
         openUpdateWindowAndCheck();
         return; // הפונקציה תקרא לעצמה שוב אחרי שהחלון יהיה מוכן
     }
 
-    const options = { hostname: 'api.github.com', path: '/repos/hillelkingqt/GeminiDesk/releases/latest', method: 'GET', headers: { 'User-Agent': 'GeminiDesk-App' }};
-    const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => { data += chunk; });
-        res.on('end', async () => {
-            let releaseNotesHTML = '<p>Could not load release notes.</p>';
-            try {
-                const releaseInfo = JSON.parse(data);
-                if (releaseInfo.body) {
-                    releaseNotesHTML = await marked.parse(releaseInfo.body);
-                }
-            } catch (e) {
-                console.error('Failed to parse release notes JSON:', e);
-            }
+    try {
+        const { marked } = await import('marked');
+        const options = { hostname: 'api.github.com', path: '/repos/hillelkingqt/GeminiDesk/releases/latest', method: 'GET', headers: { 'User-Agent': 'GeminiDesk-App' }};
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                let releaseNotesHTML = '<p>Could not load release notes.</p>';
+                try {
+                    const releaseInfo = JSON.parse(data);
+                    if (releaseInfo.body) { releaseNotesHTML = marked.parse(releaseInfo.body); }
+                } catch (e) { console.error('Failed to parse release notes JSON:', e); }
 
-            if (updateWin && !updateWin.isDestroyed()) {
-                updateWin.webContents.send('update-info', {
-                    status: 'update-available',
-                    version: info.version,
-                    releaseNotesHTML: releaseNotesHTML
-                });
-            }
+                if (updateWin) {
+                    updateWin.webContents.send('update-info', {
+                        status: 'update-available',
+                        version: info.version,
+                        releaseNotesHTML: releaseNotesHTML
+                    });
+                }
+            });
         });
-    });
-    req.on('error', (e) => {
-        if (updateWin && !updateWin.isDestroyed()) {
-            updateWin.webContents.send('update-info', { status: 'error', message: e.message });
-        }
-    });
-    req.end();
+        req.on('error', (e) => { if (updateWin) { updateWin.webContents.send('update-info', { status: 'error', message: e.message }); } });
+        req.end();
+    } catch (importError) { if (updateWin) { updateWin.webContents.send('update-info', { status: 'error', message: 'Failed to load modules.' }); } }
 });
 
 // החלף את המאזין הקיים של 'update-not-available' בזה:
@@ -1665,6 +1798,12 @@ ipcMain.on('close-notification-window', () => {
     notificationWin.close();
   }
 });
+
+ipcMain.on('close-personal-message-window', () => {
+  if (personalMessageWin) {
+    personalMessageWin.close();
+  }
+});
 ipcMain.on('close-download-window', () => {
   if (downloadWin) {
     downloadWin.close();
@@ -1678,21 +1817,18 @@ ipcMain.on('request-last-notification', async (event) => {
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const response = await fetch('https://latex-v25b.onrender.com/latest-message', {
-      cache: 'no-cache', // <-- הוספנו את זה
+    const response = await fetch('https://latex-v25b.onrender.com/latest-messages', {
+      cache: 'no-cache',
       signal: controller.signal
     });
     clearTimeout(timeoutId);
     
-    //... (שאר הקוד נשאר זהה)
     if (!response.ok && response.status !== 404) throw new Error(`Server error: ${response.status}`);
-    const messageData = response.status === 404 ? {} : await response.json();
+    const messages = response.status === 404 ? [] : await response.json();
     
-    if (messageData && messageData.id) {
-      settings.lastShownNotificationId = messageData.id; 
-      settings.lastMessageData = messageData;
-      saveSettings(settings);
-      senderWebContents.send('notification-data', { status: 'found', content: messageData });
+    if (messages.length > 0) {
+      // When explicitly requesting, we always treat it as 'found' to show the content.
+      senderWebContents.send('notification-data', { status: 'found', content: messages });
     } else {
       senderWebContents.send('notification-data', { status: 'no-messages-ever' });
     }
@@ -1711,6 +1847,46 @@ ipcMain.on('install-update-now', () => {
 ipcMain.on('open-new-window', () => {
   createWindow();
 });
+ipcMain.on('export-chat', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const view = win ? win.getBrowserView() : null;
+  if (!view) return;
+  let cssKey;
+  try {
+    const title = await view.webContents.executeJavaScript(`(() => {
+      const t = document.querySelector('.conversation.selected .conversation-title') ||
+                document.querySelector('li.active a.prompt-link');
+      return t ? t.textContent.trim() : (document.title || 'chat');
+    })();`);
+
+    const { filePath } = await dialog.showSaveDialog(win, {
+      title: 'Export Chat',
+      defaultPath: `${(title || 'chat').trim()}.pdf`,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+    if (!filePath) return;
+
+    const css = `
+      nav, aside, header, footer,
+      [data-test-id="bard-sidenav-container"],
+      [data-test-id="new-chat-button"],
+      [data-test-id="referral-label"],
+      [data-test-id="bard-mode-switcher"],
+      [data-test-id="thinking-toggle"],
+      form, textarea, input { display: none !important; }
+    `;
+    cssKey = await view.webContents.insertCSS(css);
+
+    const pdfData = await view.webContents.printToPDF({ printBackground: true });
+    fs.writeFileSync(filePath, pdfData);
+  } catch (err) {
+    console.error('Failed to export chat:', err);
+  } finally {
+    if (cssKey) {
+      try { await view.webContents.removeInsertedCSS(cssKey); } catch (_) {}
+    }
+  }
+});
 ipcMain.on('onboarding-complete', (event) => {
   settings.onboardingShown = true;
   saveSettings(settings);
@@ -1727,6 +1903,56 @@ ipcMain.on('onboarding-complete', (event) => {
         senderWindow.setBrowserView(existingView);
         const bounds = senderWindow.getBounds();
         existingView.setBounds({ x: 0, y: 30, width: bounds.width, height: bounds.height - 30 });
+// Replace the sendCurrentTitle function in the onboarding-complete handler
+const sendCurrentTitle = async () => {
+  try {
+    const title = await existingView.webContents.executeJavaScript(`
+      (function() {
+        try {
+          // Simple helper function
+          const text = el => el ? (el.textContent || el.innerText || '').trim() : '';
+          
+          // Try multiple selector strategies
+          const selectors = [
+            '.conversation.selected .conversation-title',
+            'li.active a.prompt-link',
+            '[data-test-id="conversation-title"]',
+            'h1.conversation-title', 
+            '.conversation-title',
+            '.chat-title'
+          ];
+          
+          for (const selector of selectors) {
+            const el = document.querySelector(selector);
+            if (el) {
+              const t = text(el);
+              if (t && t !== 'Gemini' && t !== 'New Chat') return t;
+            }
+          }
+          
+          return document.title || 'New Chat';
+        } catch (e) {
+          return 'New Chat';
+        }
+      })();
+    `, true);
+    
+    if (!senderWindow.isDestroyed()) {
+      senderWindow.webContents.send('update-title', title || 'New Chat');
+    }
+  } catch (e) {
+    console.log('Safe title extraction fallback activated');
+    if (!senderWindow.isDestroyed()) {
+      senderWindow.webContents.send('update-title', 'New Chat');
+    }
+  }
+};
+
+// קרא מייד, וגם כשלדף ישתנה ה־SPA
+sendCurrentTitle();
+existingView.webContents.once('did-finish-load', sendCurrentTitle);
+existingView.webContents.on('did-navigate-in-page', sendCurrentTitle);
+
         detachedViews.delete(senderWindow);
       }).catch(err => console.error('Failed to reload drag.html:', err));
     } else {
@@ -1810,6 +2036,29 @@ ipcMain.handle('get-settings', async () => {
     return getSettings();
 });
 
+ipcMain.handle('request-current-title', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const view = win ? win.getBrowserView() : null;
+    if (!view || view.webContents.isDestroyed()) {
+        return 'New Chat'; // Return a default value if view is not available
+    }
+
+    try {
+        const title = await view.webContents.executeJavaScript(`
+            (() => {
+                const el = document.querySelector('.conversation.selected .conversation-title') ||
+                           document.querySelector('li.active a.prompt-link');
+                return el ? el.textContent.trim() : document.title;
+            })();
+        `);
+        return title || 'New Chat';
+    } catch (error) {
+        console.error('Failed to get current title:', error);
+        return 'New Chat'; // Fallback on error
+    }
+});
+
+
 ipcMain.on('update-setting', (event, key, value) => {
     // **Fix:** We don't call getSettings() again.
     // We directly modify the global settings object that exists in memory.
@@ -1831,6 +2080,14 @@ ipcMain.on('update-setting', (event, key, value) => {
             }
         });
     }
+    if (key === 'showInTaskbar') {
+        BrowserWindow.getAllWindows().forEach(w => {
+            // Do not change this setting for the personal message window
+            if (!w.isDestroyed() && w !== personalMessageWin) {
+                w.setSkipTaskbar(!value);
+            }
+        });
+    }
     if (key === 'autoStart') {
         setAutoLaunch(value);
     }
@@ -1841,12 +2098,14 @@ ipcMain.on('update-setting', (event, key, value) => {
         registerShortcuts(); // This function will now use the updated settings
     }
     
-    // Send the entire updated settings object back to the window to sync
-    BrowserWindow.getAllWindows().forEach(w => {
-        if (!w.isDestroyed()) {
-            w.webContents.send('settings-updated', settings);
-        }
-    });
+    if (key === 'language') {
+        // Instead of reloading, just notify windows of the change.
+        // The renderer process will handle re-applying translations.
+        broadcastToAllWebContents('language-changed', value);
+    }
+
+    // Broadcast the updated settings to all web contents (windows and views)
+    broadcastToAllWebContents('settings-updated', settings);
 });
 
 ipcMain.on('open-settings-window', (event) => { // Added the event word
