@@ -97,13 +97,6 @@ GeminiDesk is more than a wrapper. It's a command center, loaded with features t
     </td>
   </tr>
   <tr>
-    <td align="center" valign="top">
-      <img src="screenshots/screenshot7.png" alt="Multiple chat windows open on a desktop, showcasing the ability to handle several conversations at once." width="95%">
-    </td>
-    <td align="center" valign="top">
-      <img src="screenshots/screenshot8.png" alt="The notification viewer displaying multiple messages in a clean, navigable carousel format." width="95%">
-    </td>
-  </tr>
 </table>
 ---
 
