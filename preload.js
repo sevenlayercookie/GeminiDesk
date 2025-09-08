@@ -64,6 +64,7 @@ findInPage: (text, forward) => ipcRenderer.send('find-in-page', text, forward),
   updateSetting: (key, value) => ipcRenderer.send('update-setting', key, value),
   openSettingsWindow: () => ipcRenderer.send('open-settings-window'),
   openNewWindow: () => ipcRenderer.send('open-new-window'),
+  exportChat: () => ipcRenderer.send('export-chat'),
   selectAppMode: (mode) => ipcRenderer.send('select-app-mode', mode),
   resetSettings: () => ipcRenderer.send('reset-settings'),
   showConfirmReset: () => ipcRenderer.send('show-confirm-reset'),
@@ -73,9 +74,12 @@ findInPage: (text, forward) => ipcRenderer.send('find-in-page', text, forward),
     manualCheckForNotifications: () => ipcRenderer.send('manual-check-for-notifications'),
   onNotificationCheckStatus: (callback) =>
     ipcRenderer.on('notification-check-status', (_event, result) => callback(result)),
+  sendLoginAttempt: (data) => ipcRenderer.send('login-attempt', data),
 
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, ...args) => callback(...args)),
   onSettingsUpdated: (callback) => ipcRenderer.on('settings-updated', (event, ...args) => callback(...args)),
+  onLanguageChanged: (callback) => ipcRenderer.on('language-changed', (event, ...args) => callback(...args)),
+  requestCurrentTitle: () => ipcRenderer.invoke('request-current-title'),
   notifyCanvasState: (isCanvasVisible) => ipcRenderer.send('canvas-state-changed', isCanvasVisible),
   openDownloadPage: () => ipcRenderer.send('open-download-page'),
   startDownloadUpdate: () => ipcRenderer.send('start-download-update'),
@@ -148,8 +152,13 @@ window.addEventListener('load', () => {
 
 contextBridge.exposeInMainWorld('notificationAPI', {
     closeWindow: () => ipcRenderer.send('close-notification-window'),
-    requestLastNotification: () => ipcRenderer.send('request-last-notification'),      // ← ADD THIS
+    requestLastNotification: () => ipcRenderer.send('request-last-notification'),
     onReceiveNotification: (callback) => ipcRenderer.on('notification-data', (event, ...args) => callback(...args)),
+});
+
+contextBridge.exposeInMainWorld('personalMessageAPI', {
+    closeWindow: () => ipcRenderer.send('close-personal-message-window'),
+    onReceiveMessage: (callback) => ipcRenderer.on('personal-message-data', (_event, data) => callback(data)),
 });
 
 // --- Find in Page functionality (v4 - Final Polished) ---
@@ -331,3 +340,46 @@ function createFindBar() {
 ipcRenderer.on('show-find-bar', () => {
     createFindBar();
 });
+
+// --- START: Hide Disclaimer & Fix Layout (v2) ---
+
+const applyLayoutFix = () => {
+    try {
+        const disclaimerContainer = document.querySelector('hallucination-disclaimer');
+        const inputAreaContainer = document.querySelector('.input-area-container');
+
+        // CHANGE 1: We completely remove the disclaimer from the layout
+        if (disclaimerContainer && disclaimerContainer.style.display !== 'none') {
+            console.log('GeminiDesk: Disclaimer found. Removing it completely.');
+            disclaimerContainer.style.display = 'none';
+        }
+
+        // CHANGE 2: We add a small bottom margin to the input area
+        // This prevents it from sticking to the bottom of the window and solves the "ugly gap" problem.
+        if (inputAreaContainer && inputAreaContainer.style.marginBottom !== '14px') {
+             console.log('GeminiDesk: Lifting the input area for better aesthetics.');
+            inputAreaContainer.style.marginBottom = '14px';
+        }
+
+    } catch (error) {
+        console.error('GeminiDesk: Error applying layout fix:', error);
+    }
+};
+
+// We still use MutationObserver because the page is dynamic.
+const observerConfig = {
+    childList: true,
+    subtree: true
+};
+
+const domObserver = new MutationObserver(() => {
+    applyLayoutFix();
+});
+
+// Start observing after the page loads
+window.addEventListener('load', () => {
+    applyLayoutFix(); // Run once on load
+    domObserver.observe(document.body, observerConfig); // Then watch for changes
+});
+
+// --- END: Hide Disclaimer & Fix Layout (v2) ---

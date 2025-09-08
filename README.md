@@ -64,14 +64,8 @@ GeminiDesk is more than a wrapper. It's a command center, loaded with features t
 * **📌 Always-On-Top Mode: Your Unwavering AI Companion**
     Keep Gemini watching over your shoulder (in a non-creepy way) while you work. Perfect for coding, writing, or just feeling less alone in the universe.
 
-* **✨ Dual AI Engines: Gemini & AI Studio**
-    Choose your playground. Seamlessly switch between the standard Gemini App for conversational chat and the powerful **AI Studio** for advanced prompt engineering and development.
-
-* **📄 Find In Page (`Ctrl+F`)**
-    Never lose your train of thought. Use the built-in Find in Page feature to instantly locate specific text within your current conversation—perfect for long, detailed discussions.
-
 * **⌨️ Your Keys, Your Kingdom: Total Shortcut Customization**
-    Don't like our defaults? Remap every shortcut in the settings. Even better, choose whether shortcuts work **globally** (from any app) or only when GeminiDesk is active for a truly custom workflow.
+    Don't like our default hotkeys? No problem! Dive into the settings and remap every single shortcut to fit your unique, beautiful, and probably weird workflow.
 
 * **🚀 Run on Startup**
     Have GeminiDesk greet you the moment your computer boots up. Because your AI assistant should be as ready to work as you are (or more so).
@@ -84,38 +78,6 @@ GeminiDesk is more than a wrapper. It's a command center, loaded with features t
 
 ---
 
-## 📸 Screenshots
-
-<details>
-<summary>Click to view screenshots</summary>
-<p align="center">
-  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot1.png" alt="Screenshot 1" width="48%">
-  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot2.png" alt="Screenshot 2" width="48%">
-  <br>
-  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot3.png" alt="Screenshot 3" width="48%">
-  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot4.png" alt="Screenshot 4" width="48%">
-  <br>
-  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot5.png" alt="Screenshot 5" width="48%">
-  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot6.png" alt="Screenshot 6" width="48%">
-  <br>
-  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot7.png" alt="Screenshot 7" width="48%">
-  <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot8.png" alt="Screenshot 8" width="48%">
-</p>
-<p align="center">
-  <em>More screenshots coming soon...</em>
-  <br>
-  <em>Placeholder for new screenshot 1</em>
-  <br>
-  <em>Placeholder for new screenshot 2</em>
-  <br>
-  <em>Placeholder for new screenshot 3</em>
-  <br>
-  <em>Placeholder for new screenshot 4</em>
-</p>
-</details>
-
----
-
 ## ⌨️ The Secret Handshakes (Default Shortcuts)
 
 Access the magic from anywhere in your OS. (Remember, you can change ALL of these in the settings!)
@@ -123,16 +85,14 @@ Access the magic from anywhere in your OS. (Remember, you can change ALL of thes
 | Shortcut                      | Action                                      |
 | ----------------------------- | ------------------------------------------- |
 | `Alt` + `G`                   | Toggle App Visibility (Show / Hide)         |
-| `Alt` + `N`                   | Open a New Window                           |
-| `Alt` + `S`                   | Search Chats Instantly                      |
-| `Ctrl` + `F`                  | Find Text in Current Page                   |
-| `Ctrl` + `Alt` + `S`          | Capture Screenshot & Paste into Chat        |
+| `Alt` + `N`                   | **Open a New Window** |
+| `Alt` + `S`                   | **Search Chats Instantly** |
+| `Control` + `Alt` + `S`       | **Capture Screenshot** & Paste into Chat    |
 | `Alt` + `P`                   | New Chat with **Pro** Model                 |
 | `Alt` + `F`                   | New Chat with **Flash** Model               |
-| `Alt` + `R`                   | Refresh the Active View                     |
+| `Alt` + `R`                   | **Refresh the active View**                 |
 | `Alt` + `I`                   | Show Instructions / Onboarding Screen       |
-| `Alt` + `Q`                   | Close Current Window                        |
-| `Ctrl` + `W`                  | Quit Application                            |
+| `Alt` + `Q`                   | Quit Application (The "I'm Done" Button)    |
 
 *On macOS, `Alt` is generally replaced by `Command` (e.g., `Command+G`).*
 

@@ -7,43 +7,27 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         
         :root {
-            --bg-graphite: #19191D;
-            --bg-surface: #222228;
-            --bg-interactive: #2f2f37;
-            --text-primary: #f0f0f5;
-            --text-secondary: #8a8a93;
-            --accent-neon: #34d399;
-            --accent-blue: #58a6ff;
-            --danger-color: #ef4444;
-            --border-color: rgba(255, 255, 255, 0.1);
+            --bg-graphite: #19191D; --bg-surface: #222228; --bg-interactive: #2f2f37;
+            --text-primary: #f0f0f5; --text-secondary: #8a8a93; --accent-neon: #34d399;
+            --accent-blue: #58a6ff; --danger-color: #ef4444; --border-color: rgba(255, 255, 255, 0.1);
         }
 
         html.light-mode {
-            --bg-graphite: #f5f5f5;
-            --bg-surface: #ffffff;
-            --bg-interactive: #e0e0e0;
-            --text-primary: #212121;
-            --text-secondary: #757575;
-            --accent-neon: #007aff;
-            --accent-blue: #007aff;
-            --danger-color: #d32f2f;
-            --border-color: #dcdcdc;
+            --bg-graphite: #f5f5f5; --bg-surface: #ffffff; --bg-interactive: #e0e0e0;
+            --text-primary: #212121; --text-secondary: #757575; --accent-neon: #007aff;
+            --accent-blue: #007aff; --danger-color: #d32f2f; --border-color: #dcdcdc;
         }
 
         html, body {
             margin: 0; padding: 0; background-color: transparent;
             color: var(--text-primary); font-family: 'Inter', sans-serif;
-            overflow: hidden; user-select: none;
-            -webkit-font-smoothing: antialiased;
+            overflow: hidden; user-select: none; -webkit-font-smoothing: antialiased;
         }
 
         .container {
-            width: 100vw; height: 100vh;
-            display: flex; flex-direction: column;
-            background-color: var(--bg-graphite);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            width: 100vw; height: 100vh; display: flex; flex-direction: column;
+            background-color: var(--bg-graphite); border: 1px solid var(--border-color);
+            border-radius: 12px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             animation: fadeIn 0.5s ease-out forwards;
         }
 
@@ -53,10 +37,8 @@
         }
 
         .header {
-            -webkit-app-region: drag;
-            display: flex; align-items: center;
-            padding: 16px 20px; flex-shrink: 0;
-            border-bottom: 1px solid var(--border-color);
+            -webkit-app-region: drag; display: flex; align-items: center;
+            padding: 16px 20px; flex-shrink: 0; border-bottom: 1px solid var(--border-color);
         }
         
         .header-icon { width: 20px; height: 20px; margin-right: 12px; stroke: var(--accent-neon); }
@@ -73,94 +55,76 @@
         }
         #close-notification-btn:hover { background-color: var(--danger-color); color: white; transform: rotate(180deg); }
 
-        .state-wrapper {
-            flex-grow: 1; position: relative;
-            padding: 20px;
-            overflow: hidden; /* Important for transitions */
-        }
+        .state-wrapper { flex-grow: 1; position: relative; padding: 20px; overflow: hidden; }
         
         .state {
-            position: absolute;
-            top: 20px; left: 20px; right: 20px; bottom: 20px;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center;
-            opacity: 0;
-            transform: scale(0.95);
-            transition: opacity 0.4s ease, transform 0.4s ease;
-            pointer-events: none;
+            position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; opacity: 0; transform: scale(0.95);
+            transition: opacity 0.4s ease, transform 0.4s ease; pointer-events: none;
         }
         
-        .state.active {
-            opacity: 1;
-            transform: scale(1);
-            pointer-events: auto;
-        }
-        
-        .state h3 {
-            font-size: 18px;
-            font-weight: 700;
-            margin-top: 20px;
-            margin-bottom: 8px;
-        }
+        .state.active { opacity: 1; transform: scale(1); pointer-events: auto; }
+        .state h3 { font-size: 18px; font-weight: 700; margin-top: 20px; margin-bottom: 8px; }
+        .state p { font-size: 14px; color: var(--text-secondary); max-width: 300px; line-height: 1.6; }
 
-        .state p {
-            font-size: 14px;
-            color: var(--text-secondary);
-            max-width: 300px;
-            line-height: 1.6;
-        }
-
-        /* State 1: Checking Animation */
         .checking-loader {
-            width: 50px; height: 50px;
-            border: 4px solid var(--bg-surface);
-            border-top-color: var(--accent-neon);
-            border-radius: 50%;
+            width: 50px; height: 50px; border: 4px solid var(--bg-surface);
+            border-top-color: var(--accent-neon); border-radius: 50%;
             animation: spin 1s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* State 2: Content Area */
+        /* --- Content Slider (Carousel) --- */
         #content-state {
             align-items: stretch; justify-content: flex-start;
+            padding: 0; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column;
         }
-        #text-content { white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; height: 100%;}
-        #html-content { width: 100%; height: 100%; border: none; }
+        .message-slider {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+        .message-slide {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.5s ease;
+        }
+        .message-slide.active { opacity: 1; transform: translateX(0); z-index: 1; }
+        .message-slide.previous { transform: translateX(-100%); }
+        .message-slide .text-content { white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; height: 100%; }
+        .message-slide .html-content { width: 100%; height: 100%; border: none; }
 
-        /* Scrollbar styling for both text and iframe */
-        #content-state ::-webkit-scrollbar,
-        #html-content::-webkit-scrollbar { width: 14px; }
-        #content-state ::-webkit-scrollbar-track,
-        #html-content::-webkit-scrollbar-track { background: transparent; }
-        #content-state ::-webkit-scrollbar-thumb,
-        #html-content::-webkit-scrollbar-thumb {
-            background-color: var(--bg-surface);
-            border-radius: 7px;
+        #content-state ::-webkit-scrollbar { width: 14px; }
+        #content-state ::-webkit-scrollbar-track { background: transparent; }
+        #content-state ::-webkit-scrollbar-thumb {
+            background-color: var(--bg-surface); border-radius: 7px;
             border: 4px solid var(--bg-graphite);
         }
-        #content-state ::-webkit-scrollbar-thumb:hover,
-        #html-content::-webkit-scrollbar-thumb:hover { background-color: var(--accent-neon); }
+        #content-state ::-webkit-scrollbar-thumb:hover { background-color: var(--accent-neon); }
 
-        /* States 3, 4, 5: Icons */
+        .navigation-controls {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        .nav-button {
+            background-color: var(--bg-interactive); color: var(--text-primary);
+            border: 1px solid var(--border-color); border-radius: 50%;
+            width: 36px; height: 36px; display: flex; align-items: center;
+            justify-content: center; cursor: pointer; transition: all 0.2s ease;
+        }
+        .nav-button:hover { border-color: var(--accent-blue); color: var(--accent-blue); transform: scale(1.1); }
+        .nav-button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; border-color: var(--border-color); color: var(--text-secondary); }
+        .message-counter { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+
         .state-icon { width: 56px; height: 56px; }
-
-        /* State 3 Button */
-        #show-last-message-btn {
-            margin-top: 25px; padding: 10px 20px;
-            font-size: 14px; font-weight: 500;
-            background-color: var(--bg-interactive);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px; cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        #show-last-message-btn:hover {
-            border-color: var(--accent-blue);
-            color: var(--accent-blue);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(88, 166, 255, 0.1);
-        }
-
     </style>
 </head>
 <body>
@@ -168,8 +132,8 @@
         <div class="header">
             <svg class="header-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
             <div class="header-text">
-                <span class="header-title">System Notification</span>
-                <span class="header-subtitle">for GeminiDesk</span>
+                <span class="header-title" data-i18n="notification-title">System Notification</span>
+                <span class="header-subtitle" data-i18n="notification-subtitle">for GeminiDesk</span>
             </div>
             <button id="close-notification-btn" title="Close">&times;</button>
         </div>
@@ -177,44 +141,49 @@
         <div class="state-wrapper">
             <div id="checking-state" class="state active">
                 <div class="checking-loader"></div>
-                <h3>Checking for messages...</h3>
+                <h3 data-i18n="notification-checking">Checking for messages...</h3>
             </div>
 
             <div id="content-state" class="state">
-                <div id="text-content" style="display: none;"></div>
-                <iframe id="html-content" sandbox="allow-scripts allow-same-origin" style="display: none;"></iframe>
-            </div>
-
-            <div id="no-new-message-state" class="state">
-                <svg class="state-icon" style="color: var(--accent-blue);" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <h3>You're all caught up!</h3>
-                <p>There are no new messages, but you can view the last one you received.</p>
-                <button id="show-last-message-btn">Show Last Notification</button>
+                <div class="message-slider" id="message-slider">
+                    <!-- Message slides will be injected here -->
+                </div>
+                <div class="navigation-controls">
+                    <button class="nav-button" id="prev-btn" title="Previous">&lt;</button>
+                    <span class="message-counter" id="message-counter"></span>
+                    <button class="nav-button" id="next-btn" title="Next">&gt;</button>
+                </div>
             </div>
 
             <div id="no-messages-ever-state" class="state">
                 <svg class="state-icon" style="color: var(--accent-neon);" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                <h3>All Clear</h3>
-                <p>No system notifications to show at the moment. We'll let you know when there's news.</p>
+                <h3 data-i18n="notification-all-clear">All Clear</h3>
+                <p data-i18n="notification-no-messages-ever">No system notifications to show at the moment. We'll let you know when there's news.</p>
             </div>
             
             <div id="error-state" class="state">
                 <svg class="state-icon" style="color: var(--danger-color);" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <h3>An Error Occurred</h3>
-                <p id="error-message-text">Could not connect to the notification service. Please check your internet connection.</p>
+                <h3 data-i18n="notification-error-title">An Error Occurred</h3>
+                <p id="error-message-text" data-i18n="notification-error-default-text">Could not connect to the notification service. Please check your internet connection.</p>
             </div>
         </div>
     </div>
-
+<script src="translations.js"></script>
 <script>
-    const container = document.getElementById('main-container');
     const states = {
         checking: document.getElementById('checking-state'),
         content: document.getElementById('content-state'),
-        noNew: document.getElementById('no-new-message-state'),
         noEver: document.getElementById('no-messages-ever-state'),
         error: document.getElementById('error-state')
     };
+    const slider = document.getElementById('message-slider');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const counter = document.getElementById('message-counter');
+
+    let messages = [];
+    let currentIndex = 0;
+    let lastDirection = 'next';
 
     function setActiveState(activeStateKey) {
         Object.keys(states).forEach(key => {
@@ -222,39 +191,81 @@
         });
     }
 
-    function displayContent(data) {
-        const textElement = document.getElementById('text-content');
-        const iframeElement = document.getElementById('html-content');
+    function renderMessages() {
+        slider.innerHTML = '';
+        messages.forEach((msg, index) => {
+            const slide = document.createElement('div');
+            slide.className = 'message-slide';
+            slide.dataset.index = index;
 
-        if (data.type === 'text') {
-            textElement.style.display = 'block';
-            iframeElement.style.display = 'none';
-            textElement.textContent = data.content;
-        } else if (data.type === 'html') {
-            textElement.style.display = 'none';
-            iframeElement.style.display = 'block';
-            const injectedStyles = `<style>body{background-color:transparent!important;color:#f0f0f5;font-family:'Inter',sans-serif;line-height:1.7;font-size:16px;margin:0;padding:5px 10px 5px 5px}a{color:#81c7ff}img{max-width:100%;height:auto;border-radius:8px;margin-top:1em}hr{border-color:#333}::-webkit-scrollbar{width:14px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background-color:#2c2c34;border-radius:7px;border:4px solid rgba(0,0,0,0);background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background-color:#34d399}</style>`;
-            iframeElement.srcdoc = injectedStyles + data.content;
-        }
-        setActiveState('content');
+            if (msg.type === 'text') {
+                const textElement = document.createElement('div');
+                textElement.className = 'text-content';
+                textElement.textContent = msg.content;
+                slide.appendChild(textElement);
+            } else if (msg.type === 'html') {
+                const iframeElement = document.createElement('iframe');
+                iframeElement.className = 'html-content';
+                iframeElement.sandbox = 'allow-scripts allow-same-origin';
+                const injectedStyles = `<style>body{background-color:transparent!important;color:var(--text-primary);font-family:'Inter',sans-serif;line-height:1.7;font-size:16px;margin:0;padding:5px 10px 5px 5px}a{color:var(--accent-blue)}img{max-width:100%;height:auto;border-radius:8px;margin-top:1em}hr{border-color:var(--border-color)}::-webkit-scrollbar{width:14px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background-color:var(--bg-surface);border-radius:7px;border:4px solid var(--bg-graphite);background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background-color:var(--accent-neon)}</style>`;
+                iframeElement.srcdoc = injectedStyles + msg.content;
+                slide.appendChild(iframeElement);
+            }
+            slider.appendChild(slide);
+        });
+        updateSlider();
     }
+
+    function updateSlider() {
+        const slides = document.querySelectorAll('.message-slide');
+        slides.forEach((slide, index) => {
+            slide.classList.remove('active', 'previous');
+            if (index === currentIndex) {
+                slide.classList.add('active');
+            } else if (index < currentIndex) {
+                slide.classList.add('previous');
+            }
+        });
+
+        counter.textContent = `${currentIndex + 1} / ${messages.length}`;
+        prevBtn.disabled = currentIndex === 0;
+        nextBtn.disabled = currentIndex === messages.length - 1;
+    }
+
+    prevBtn.addEventListener('click', () => {
+        if (currentIndex > 0) {
+            currentIndex--;
+            lastDirection = 'prev';
+            updateSlider();
+        }
+    });
+
+    nextBtn.addEventListener('click', () => {
+        if (currentIndex < messages.length - 1) {
+            currentIndex++;
+            lastDirection = 'next';
+            updateSlider();
+        }
+    });
 
     document.getElementById('close-notification-btn').addEventListener('click', () => {
         window.notificationAPI.closeWindow();
     });
 
-    document.getElementById('show-last-message-btn').addEventListener('click', () => {
-        setActiveState('checking'); // Show loader while we fetch the last message
-        window.notificationAPI.requestLastNotification();
-    });
-
     window.notificationAPI.onReceiveNotification((result) => {
         switch (result.status) {
             case 'found':
-                displayContent(result.content);
-                break;
-            case 'no-new-message':
-                setActiveState('noNew');
+            case 'no-new-message': // Treat this the same as found, just don't reset index
+                if (result.content && result.content.length > 0) {
+                    messages = result.content;
+                    if(result.status === 'found') {
+                        currentIndex = 0; // Only go to first message if it's a new notification
+                    }
+                    renderMessages();
+                    setActiveState('content');
+                } else {
+                     setActiveState('noEver');
+                }
                 break;
             case 'no-messages-ever':
                 setActiveState('noEver');
@@ -265,21 +276,33 @@
                 break;
         }
     });
-</script>
-<script>
-// --- Theme Application Logic ---
-function applyTheme(theme) {
-    if (theme === 'light') {
-        document.documentElement.classList.add('light-mode');
-    } else {
-        document.documentElement.classList.remove('light-mode');
-    }
-}
 
-if (window.electronAPI) {
-    window.electronAPI.theme.getResolved().then(applyTheme);
-    window.electronAPI.theme.onUpdate(applyTheme);
-}
+    // --- Theme and Translation ---
+    if (window.electronAPI) {
+        // Apply theme
+        window.electronAPI.theme.getResolved().then(theme => {
+            document.documentElement.classList.toggle('light-mode', theme === 'light');
+        });
+        window.electronAPI.theme.onUpdate(theme => {
+            document.documentElement.classList.toggle('light-mode', theme === 'light');
+        });
+
+        // Apply translations
+        const applyTranslations = (lang) => {
+            const dict = translations[lang] || translations.en;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key]) el.textContent = dict[key];
+            });
+            document.documentElement.lang = lang;
+            document.documentElement.dir = ['he', 'ar', 'fa', 'ur'].includes(lang) ? 'rtl' : 'ltr';
+        };
+
+        window.electronAPI.getSettings().then(settings => {
+            applyTranslations(settings.language || 'en');
+        });
+        window.electronAPI.onLanguageChanged(applyTranslations);
+    }
 </script>
 </body>
 </html>

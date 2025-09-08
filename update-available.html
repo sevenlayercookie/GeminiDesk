@@ -274,19 +274,19 @@
                         </linearGradient>
                     </defs>
                 </svg>
-                <h1 class="title">Querying the Cosmic Archives...</h1>
-                <p class="message">Asking the server nicely if it has any fresh bits for us. Hold tight, the server hamsters are just waking up.</p>
+                <h1 class="title" data-i18n="update-checking-title">Querying the Cosmic Archives...</h1>
+                <p class="message" data-i18n="update-checking-message">Asking the server nicely if it has any fresh bits for us. Hold tight, the server hamsters are just waking up.</p>
             </div>
 
             <div id="update-found-state" class="state">
-                <h1 class="title">Great Scott! An Update Has Landed!</h1>
-                <p id="version">Loading version info...</p>
+                <h1 class="title" data-i18n="update-found-title">Great Scott! An Update Has Landed!</h1>
+                <p id="version" data-i18n="update-version-text" data-i18n-version-placeholder="%VERSION%">Version %VERSION% is ready for deployment!</p>
                 <div class="release-notes-container">
                     <div id="release-notes"></div>
                 </div>
                 <div class="button-group">
-                    <button id="later-btn" class="button">I'll Live Dangerously</button>
-                    <button id="download-btn" class="button">Engage!</button>
+                    <button id="later-btn" class="button" data-i18n="update-later-button">I'll Live Dangerously</button>
+                    <button id="download-btn" class="button" data-i18n="update-download-button">Engage!</button>
                 </div>
             </div>
             
@@ -295,9 +295,9 @@
                     <circle style="stroke: var(--success-color);" cx="26" cy="26" r="25" fill="none" stroke-width="4"/>
                     <path style="stroke: var(--success-color);" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" stroke-width="6" stroke-linecap="round"/>
                 </svg>
-                <h1 class="title">Nailed It! You're on the Bleeding Edge.</h1>
-                <p class="message">Your version is the freshest of the fresh. No updates needed. Keep being awesome.</p>
-                <button id="close-btn" class="button">Rock On!</button>
+                <h1 class="title" data-i18n="update-not-found-title">Nailed It! You're on the Bleeding Edge.</h1>
+                <p class="message" data-i18n="update-not-found-message">Your version is the freshest of the fresh. No updates needed. Keep being awesome.</p>
+                <button id="close-btn" class="button" data-i18n="update-not-found-button">Rock On!</button>
             </div>
 
             <div id="error-state" class="state">
@@ -305,13 +305,14 @@
                     <circle style="stroke: var(--danger-color);" cx="26" cy="26" r="25" fill="none" stroke-width="4"/>
                     <path style="stroke: var(--danger-color);" fill="none" d="M16 16 36 36 M36 16 16 36" stroke-width="6" stroke-linecap="round"/>
                 </svg>
-                <h1 class="title">Houston, We Have a Poodle.</h1>
-                <p id="error-message" class="message">There seems to be a glitch in the Matrix. Check your connection or try again after the robots have had their coffee.</p>
-                <button id="error-close-btn" class="button">Abort Mission</button>
+                <h1 class="title" data-i18n="update-error-title">Houston, We Have a Poodle.</h1>
+                <p id="error-message" class="message" data-i18n="update-error-message">There seems to be a glitch in the Matrix. Check your connection or try again after the robots have had their coffee.</p>
+                <button id="error-close-btn" class="button" data-i18n="update-error-button">Abort Mission</button>
             </div>
         </div>
     </div>
 
+<script src="translations.js"></script>
 <script>
     const states = {
         checking: document.getElementById('checking-state'),
@@ -329,11 +330,9 @@
         
         if (oldState) {
             oldState.classList.add('exiting');
-            
-            // Wait for the exit animation to finish before hiding it completely
             setTimeout(() => {
                 oldState.classList.remove('active', 'exiting');
-            }, 500); // This duration should match the transition duration in CSS
+            }, 500);
         }
         
         newState.classList.add('active');
@@ -341,33 +340,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // --- API Mock for testing in browser ---
-        // You can comment this out when using in Electron.
-        const mockAPI = {
-            onUpdateInfo: (callback) => {
-                // Simulate a check
-                setTimeout(() => callback({ status: 'checking' }), 500);
-                
-                // Simulate one of the results after a delay
-                const results = [
-                    { 
-                        status: 'update-available', 
-                        version: 'v2.0-SUPERNOVA', 
-                        releaseNotesHTML: "<h3>What's new in this galaxy?</h3><ul><li>A revolutionary feature that launches your productivity into the stratosphere.</li><li>Squashed some intergalactic bugs that were messing with the timeline.</li><li>The UI now feels like it was taken from a spaceship. <a href='#'>Read more</a>.</li><li>Added a mysterious new button. We're not sure what it does. Good luck.</li></ul>" 
-                    },
-                    { status: 'up-to-date' },
-                    { status: 'error', message: "connection timed out" }
-                ];
-                const randomResult = results[Math.floor(Math.random() * results.length)];
-
-                setTimeout(() => callback(randomResult), 4000);
-            },
-            openDownloadPage: () => alert("Redirecting to download page... Vrooom!"),
-            closeUpdateWindow: () => alert("Closing update window. See you, space cowboy...")
-        };
-        const api = window.updateAPI ? window.updateAPI : mockAPI;
-        const mainAppApi = window.electronAPI ? window.electronAPI : mockAPI;
-        // --- End of Mock ---
+        const api = window.updateAPI;
+        const mainAppApi = window.electronAPI;
 
         api.onUpdateInfo((data) => {
             switch(data.status) {
@@ -375,7 +349,7 @@
                     showState('checking');
                     break;
                 case 'update-available':
-                    document.getElementById('version').textContent = `Version ${data.version} is ready for deployment!`;
+                    document.getElementById('version').textContent = document.getElementById('version').dataset.i18nVersionPlaceholder.replace('%VERSION%', data.version);
                     document.getElementById('release-notes').innerHTML = data.releaseNotesHTML;
                     showState('found');
                     break;
@@ -396,7 +370,6 @@
         document.getElementById('close-btn').addEventListener('click', () => mainAppApi.closeUpdateWindow());
         document.getElementById('error-close-btn').addEventListener('click', () => mainAppApi.closeUpdateWindow());
 
-        // Parallax background effect
         document.body.addEventListener('mousemove', (e) => {
             const { clientX, clientY } = e;
             const { innerWidth, innerHeight } = window;
@@ -405,6 +378,26 @@
             document.documentElement.style.setProperty('--mouse-x', x);
             document.documentElement.style.setProperty('--mouse-y', y);
         });
+
+        // --- Translation Logic ---
+        if (window.electronAPI) {
+            const applyTranslations = (lang) => {
+                const dict = translations[lang] || translations.en;
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const key = el.getAttribute('data-i18n');
+                    if (dict[key]) {
+                        el.textContent = dict[key];
+                    }
+                });
+                document.documentElement.lang = lang;
+                document.documentElement.dir = ['he', 'ar', 'fa', 'ur'].includes(lang) ? 'rtl' : 'ltr';
+            };
+
+            window.electronAPI.getSettings().then(settings => {
+                applyTranslations(settings.language || 'en');
+            });
+            window.electronAPI.onLanguageChanged(applyTranslations);
+        }
     });
 </script>
 <script>
