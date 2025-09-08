@@ -98,7 +98,6 @@ GeminiDesk is more than a wrapper. It's a command center, loaded with features t
   </tr>
   <tr>
 </table>
----
 
 ## ⌨️ The Secret Handshakes (Default Shortcuts)
 
