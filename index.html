@@ -3,942 +3,981 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeminiDesk Remote Dashboard</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <meta name="description" content="Meet GeminiDesk, the ultimate unofficial desktop app for Google Gemini. Get a native, feature-rich Gemini desktop experience on Windows and macOS. Ditch the browser tab and unleash your AI powerhouse!">
+    <meta name="keywords" content="Gemini, Google Gemini, Gemini Desktop App, Gemini App, AI Assistant, Desktop AI, Native AI App, Windows, macOS, hillelking">
+    <title>GeminiDesk - The Unofficial Google Gemini Desktop App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #7b4397;
-            --secondary-color: #dc2430;
-            --bg-start: #1e0033;
-            --bg-end: #3f004b;
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --text-primary: #f0f0f0;
-            --text-secondary: #c0c0c0;
-            --accent-glow: rgba(123, 67, 151, 0.7);
-            --online-color: #28a745;
-            --limited-color: #ffc107;
-            --offline-color: #6c757d;
-            --border-radius-lg: 16px;
-            --border-radius-md: 10px;
-            --transition-speed: 0.3s;
-        }
-
-        * {
+        /* ------------------- */
+        /* --- CSS Reset --- */
+        /* ------------------- */
+        *, *::before, *::after {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+        }
+
+        /* ------------------- */
+        /* --- Screenshots Section --- */
+        /* ------------------- */
+        .screenshot-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .screenshot-item {
+            display: block;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+            position: relative;
+            aspect-ratio: 16 / 9; /* Maintain aspect ratio */
+        }
+
+        .screenshot-item:hover {
+            transform: translateY(-10px) scale(1.03);
+            box-shadow: 0 16px 40px 0 var(--shadow-color);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .screenshot-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .screenshot-item.placeholder {
+            background: var(--card-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 1.1rem;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
+        .screenshot-item.placeholder span {
+            padding: 1rem;
+        }
+
+        /* ------------------- */
+        /* --- Variables & Theme --- */
+        /* ------------------- */
+        :root {
+            --bg-color: #020010;
+            --text-color: #e0e0e0;
+            --primary-color: #a7c7ff;
+            --secondary-color: #d8baff;
+            --accent-color: #a1e9b1;
+            --card-bg: rgba(15, 12, 41, 0.5);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --code-bg: #1e1e2e;
+            --header-bg: rgba(2, 0, 16, 0.6);
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --scroll-thumb-color: var(--primary-color);
+            --scroll-track-color: var(--code-bg);
+            --glow-color: var(--primary-color);
+        }
+
+        html.light-mode {
+            --bg-color: #f0f2f5;
+            --text-color: #1d1d1f;
+            --primary-color: #0071e3;
+            --secondary-color: #512da8;
+            --accent-color: #2e7d32;
+            --card-bg: rgba(255, 255, 255, 0.6);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --code-bg: #f5f5f5;
+            --header-bg: rgba(240, 242, 245, 0.7);
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --glow-color: var(--primary-color);
+        }
+
+        /* ------------------- */
+        /* --- Base Styles --- */
+        /* ------------------- */
+        html {
+            scroll-behavior: smooth;
         }
 
         body {
-            font-family: 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
-            min-height: 100vh;
-            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.7;
             overflow-x: hidden;
-        }
-
-        /* --- Animations --- */
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(20px); } to { transform: translateY(0); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 25px;
-            animation: fadeIn 0.5s ease-out, slideUp 0.5s ease-out;
-        }
-
-        .panel-container {
+            transition: background-color 0.3s ease, color 0.3s ease;
             position: relative;
         }
         
-        .panel {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--border-radius-lg);
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(12px);
-            margin-bottom: 25px;
-            transition: opacity var(--transition-speed) ease-in-out, transform var(--transition-speed) ease-in-out;
-            will-change: transform, opacity;
-        }
-        
-        .panel.hidden {
-            opacity: 0;
-            transform: scale(0.98);
-            pointer-events: none;
-            position: absolute;
+        /* Interactive Glow Effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(
+                400px circle at var(--x, 50%) var(--y, 50%),
+                rgba(167, 199, 255, 0.15),
+                transparent 80%
+            );
+            z-index: 0;
+            transition: background 0.1s ease-out;
+        }
+        html.light-mode body::before {
+             background: radial-gradient(
+                400px circle at var(--x, 50%) var(--y, 50%),
+                rgba(0, 113, 227, 0.1),
+                transparent 80%
+            );
         }
 
+
+        /* Custom Scrollbar */
+        body::-webkit-scrollbar {
+            width: 10px;
+        }
+        body::-webkit-scrollbar-track {
+            background: var(--scroll-track-color);
+        }
+        body::-webkit-scrollbar-thumb {
+            background-color: var(--scroll-thumb-color);
+            border-radius: 20px;
+            border: 3px solid var(--scroll-track-color);
+        }
+
+        /* ------------------- */
+        /* --- Animated Aurora Background --- */
+        /* ------------------- */
+        #aurora-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+        }
+
+        .aurora-shape {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+        }
+
+        .shape1 {
+            width: 500px;
+            height: 500px;
+            background: #4e54c8;
+            top: -150px;
+            left: -150px;
+            animation: move1 25s infinite alternate;
+        }
+
+        .shape2 {
+            width: 600px;
+            height: 600px;
+            background: #8f94fb;
+            bottom: -200px;
+            right: -200px;
+            animation: move2 30s infinite alternate;
+        }
+        
+        .shape3 {
+            width: 400px;
+            height: 400px;
+            background: #c58af9;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: move3 20s infinite alternate;
+        }
+
+        @keyframes move1 {
+            from { transform: translate(0, 0) rotate(0deg); }
+            to { transform: translate(200px, 300px) rotate(180deg); }
+        }
+        @keyframes move2 {
+            from { transform: translate(0, 0) rotate(0deg); }
+            to { transform: translate(-300px, -200px) rotate(-180deg); }
+        }
+        @keyframes move3 {
+            from { transform: scale(1) rotate(0deg); }
+            to { transform: scale(1.5) rotate(90deg); }
+        }
+
+        /* ------------------- */
+        /* --- Header & Theme Toggle --- */
+        /* ------------------- */
         .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 20px;
+            z-index: 1000;
+            background: var(--header-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            transition: background 0.3s ease;
+        }
+
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        .theme-switch {
+            display: inline-block;
+            height: 24px;
+            position: relative;
+            width: 50px;
+        }
+
+        .theme-switch input {
+            display:none;
+        }
+
+        .slider {
+            background-color: #333;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            background-color: #fff;
+            bottom: 4px;
+            content: "";
+            height: 16px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 16px;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        /* ------------------- */
+        /* --- Layout & Content --- */
+        /* ------------------- */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        section {
+            padding: 6rem 0;
+            border-bottom: 1px solid var(--card-border);
+        }
+        section:last-of-type {
+            border-bottom: none;
+        }
+
+        h1, h2, h3 {
+            font-weight: 700;
+            letter-spacing: -0.02em;
         }
 
         h1 {
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 2.2rem;
-            text-shadow: 0 0 10px var(--accent-glow);
+            font-size: clamp(2.5rem, 5vw, 4.5rem);
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(167, 199, 255, 0.3);
         }
 
-        .header-actions { display: flex; gap: 15px; }
+        h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+        
+        h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
 
-        .btn {
-            padding: 12px 24px;
-            border: 1px solid var(--glass-border);
-            border-radius: var(--border-radius-md);
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            transition: all var(--transition-speed) ease;
+        p {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            max-width: 65ch;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        a {
+            color: var(--primary-color);
             text-decoration: none;
-            font-size: 14px;
-            background: var(--glass-bg);
-            color: var(--text-primary);
+            transition: color 0.3s ease;
         }
 
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        a:hover {
+            text-decoration: underline;
+            color: var(--secondary-color);
         }
 
-        .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); border: none; }
-        .btn-primary:hover { box-shadow: 0 5px 20px rgba(220, 36, 48, 0.4); }
-
-        .panel-header {
-            color: var(--text-primary);
-            margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.8rem;
-            border-bottom: 1px solid var(--glass-border);
-            padding-bottom: 15px;
-        }
-
-        /* --- Client List Styles --- */
-        .clients-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 25px;
-        }
-
-        .client-card {
-            padding: 25px;
-            border-radius: var(--border-radius-md);
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all var(--transition-speed) ease;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            position: relative;
-            overflow: hidden;
-            background-color: var(--glass-bg);
-            border-color: var(--glass-border);
-            animation: fadeIn 0.5s ease-out forwards, slideUp 0.5s ease-out forwards;
-            opacity: 0;
-        }
-
-        .client-card.clickable:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        .client-card::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 300px;
-            height: 300px;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            filter: blur(80px);
-            opacity: 0;
-            transition: opacity var(--transition-speed) ease;
-        }
-        
-        .client-card.online-full::before { background: var(--online-color); }
-        .client-card.online-limited::before { background: var(--limited-color); }
-        .client-card.clickable:hover::before { opacity: 0.3; }
-        .client-card.offline { cursor: not-allowed; color: var(--text-secondary); opacity: 0.7; }
-
-        .client-status-dot {
-            width: 12px; height: 12px;
-            border-radius: 50%;
-            margin-right: 12px;
-            box-shadow: 0 0 8px;
-        }
-        .online-full .client-status-dot { background-color: var(--online-color); box-shadow-color: var(--online-color); }
-        .online-limited .client-status-dot { background-color: var(--limited-color); box-shadow-color: var(--limited-color); }
-        .offline .client-status-dot { background-color: var(--offline-color); box-shadow-color: var(--offline-color); }
-        
-        .client-info h3 { font-size: 1.2rem; margin-bottom: 8px; display: flex; align-items: center; }
-        .client-info p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.4; }
-
-        /* --- File Browser Styles --- */
-        .browser-header {
+        /* ------------------- */
+        /* --- Hero Section --- */
+        /* ------------------- */
+        .hero {
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            margin-bottom: 25px;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding-top: 80px; /* Header height */
         }
         
-        .browser-nav { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .hero-logo {
+            width: 150px;
+            margin-bottom: 2rem;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #c0c0c0;
+        }
+        html.light-mode .hero p {
+            color: #444;
+        }
+
+        .hero em {
+            font-style: normal;
+            font-size: 1rem;
+            color: #999;
+        }
+        html.light-mode .hero em {
+            color: #666;
+        }
+
+        .badges {
+            margin: 1.5rem 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .badges img {
+            vertical-align: middle;
+        }
+
+        .badges a, .badges > img {
+            display: inline-block;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
+            border-radius: 6px; /* Match badge style */
+        }
+
+        .badges a:hover, .badges > img:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        /* ------------------- */
+        /* --- Features Section --- */
+        /* ------------------- */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 32px 0 var(--shadow-color);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(300px circle at var(--x-card) var(--y-card), rgba(255,255,255,0.1), transparent 80%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
         
-        .breadcrumb {
+        .feature-card:hover:before {
+            opacity: 1;
+        }
+
+
+        .feature-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 16px 40px 0 var(--shadow-color);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .feature-card h3 {
             display: flex;
             align-items: center;
-            background: rgba(0,0,0,0.2);
-            padding: 8px 12px;
-            border-radius: var(--border-radius-md);
-            font-family: 'Consolas', monospace;
-            color: var(--text-secondary);
-            border: 1px solid var(--glass-border);
-            font-size: 14px;
-            flex: 1;
-            min-width: 0;
+            gap: 0.75rem;
+        }
+
+        .feature-card svg {
+            width: 28px;
+            height: 28px;
+            stroke: var(--primary-color);
+            flex-shrink: 0;
+        }
+
+        /* ------------------- */
+        /* --- Shortcuts Table & Code --- */
+        /* ------------------- */
+        .table-container, .code-block-wrapper {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            position: relative;
             overflow-x: auto;
         }
-        .breadcrumb ol { list-style: none; display: flex; align-items: center; white-space: nowrap; }
-        .breadcrumb li:not(:last-child)::after { content: '>'; margin: 0 8px; opacity: 0.5; }
-        .breadcrumb a { color: var(--text-primary); text-decoration: none; transition: color var(--transition-speed); }
-        .breadcrumb a:hover { color: var(--primary-color); text-decoration: underline; }
-
-        .file-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
- margin-bottom: 25px;
-        }
         
-        .search-box {
-            position: relative;
-            flex-grow: 1;
-            max-width: 400px;
-        }
-        .search-box i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
-        #searchInput {
+        table {
             width: 100%;
-            padding: 10px 15px 10px 40px;
-            border-radius: var(--border-radius-md);
-            border: 1px solid var(--glass-border);
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+        th {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        td code {
             background: rgba(0,0,0,0.2);
-            color: var(--text-primary);
-            font-size: 14px;
-            outline: none;
-            transition: all var(--transition-speed) ease;
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: var(--secondary-color);
+            border: 1px solid var(--card-border);
         }
-        #searchInput:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--accent-glow); }
-
-        .control-group { display: flex; align-items: center; gap: 10px; }
-        .control-group label { font-weight: 500; color: var(--text-secondary); }
-
-        select, input[type="checkbox"] {
-            border: 1px solid var(--glass-border);
-            border-radius: var(--border-radius-md);
-            background: rgba(0,0,0,0.2);
-            color: var(--text-primary);
-            transition: border-color var(--transition-speed) ease;
+        html.light-mode td code {
+            background: rgba(0,0,0,0.05);
         }
-        select { padding: 10px 15px; }
-        select:focus { outline: none; border-color: var(--primary-color); }
-        
-        .file-list {
-            min-height: 400px;
-            max-height: 65vh;
-            overflow-y: auto;
-            border: 1px solid var(--glass-border);
-            border-radius: var(--border-radius-lg);
-            background: rgba(0,0,0,0.1);
+
+        /* --- Code Blocks --- */
+        .code-block-wrapper {
+            padding: 0;
         }
-/* --- Elegant Toggle Switch for 'Hide Folders' --- */
-
-/* First, we target the control group's label to ensure proper alignment */
-.control-group label[for="hideFolders"],
-.control-group input[type="checkbox"]#hideFolders {
-    cursor: pointer;
-}
-.control-group label {
-    display: inline-flex;
-    align-items: center;
-    user-select: none; /* Prevents text selection on click */
-}
-
-/* Hide the original, ugly checkbox but keep it functional */
-input[type="checkbox"]#hideFolders {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    position: relative;
-    width: 52px;
-    height: 30px;
-    border-radius: 15px; /* Fully rounded */
-    background: rgba(0, 0, 0, 0.25); /* Dark, transparent background */
-    border: 1px solid var(--glass-border);
-    transition: all 0.3s ease-in-out;
-    margin-right: 12px; /* Space between switch and text */
-}
-
-/* Create the circular 'thumb' that slides */
-input[type="checkbox"]#hideFolders::before {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background-color: var(--text-secondary);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-/* Add a glowing effect on hover, consistent with the site's theme */
-input[type="checkbox"]#hideFolders:hover {
-    box-shadow: 0 0 10px var(--accent-glow);
-}
-
-/* --- STYLES FOR THE 'CHECKED' (ON) STATE --- */
-
-/* Change the background to the site's primary gradient when checked */
-input[type="checkbox"]#hideFolders:checked {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    border-color: transparent;
-}
-
-/* Slide the thumb to the right and make it bright white */
-input[type="checkbox"]#hideFolders:checked::before {
-    transform: translateX(22px);
-    background-color: #ffffff;
-}
-/* --- Custom Styled Select Dropdown --- */
-
-/* Style the wrapper we added in the HTML */
-.select-wrapper {
-    position: relative; /* Anchor for the custom arrow */
-    display: inline-block;
-}
-
-/* Style the main select box to match the site's theme */
-#sortSelect {
-    /* Remove default browser appearance */
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-
-    /* Apply custom glassmorphism styles */
-    background-color: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--border-radius-md);
-    color: var(--text-primary);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    outline: none;
-    transition: all var(--transition-speed) ease;
-    
-    /* Add padding: extra on the right for the custom arrow */
-    padding: 10px 40px 10px 15px;
-    min-width: 180px; /* Give it a nice default width */
-}
-
-/* Create the custom dropdown arrow using Font Awesome */
-.select-wrapper::after {
-    content: '\f078'; /* Font Awesome's chevron-down icon */
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900; /* Use the solid version of the icon */
-    font-size: 14px;
-    
-    color: var(--text-secondary);
-    position: absolute;
-    top: 50%;
-    right: 15px;
-    transform: translateY(-50%);
-    pointer-events: none; /* Allows clicks to pass through to the select box */
-    transition: all var(--transition-speed) ease;
-}
-
-/* Hover & Focus states for a responsive feel */
-.select-wrapper:hover #sortSelect {
-    border-color: rgba(255, 255, 255, 0.4);
-}
-
-.select-wrapper:hover::after {
-    color: var(--text-primary);
-}
-
-#sortSelect:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--accent-glow);
-}
-
-/* Style the dropdown options list to be dark */
-#sortSelect option {
-    background-color: var(--bg-end);
-    color: var(--text-primary);
-    padding: 10px; /* Note: padding on options is not supported everywhere */
-}
-
-/* Finally, style the label for consistency */
-label[for="sortSelect"] {
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-right: 5px; /* A little space between label and dropdown */
-}
-        .file-item {
-            display: flex;
-            align-items: center;
-            padding: 14px 20px;
+        pre {
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-size: 0.95rem;
+            margin-bottom: 0;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-color);
+            border: 1px solid var(--card-border);
+            padding: 0.5rem 0.8rem;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background-color var(--transition-speed) ease;
-            border-bottom: 1px solid var(--glass-border);
+            font-weight: 600;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+        .code-block-wrapper:hover .copy-btn {
+            opacity: 1;
+            background: var(--primary-color);
+            color: var(--bg-color);
+        }
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ------------------- */
+        /* --- Footer --- */
+        /* ------------------- */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        html.light-mode footer {
+            color: #777;
+        }
+
+        /* ------------------- */
+        /* --- Animations --- */
+        /* ------------------- */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .animate-on-scroll {
             opacity: 0;
-            transform: translateY(10px);
-            animation: fadeIn 0.3s ease-out forwards, slideUp 0.3s ease-out forwards;
-        }
-        .file-item:last-child { border-bottom: none; }
-        .file-item:hover { background: var(--glass-bg); }
-        
-        .file-icon { font-size: 20px; margin-right: 20px; width: 30px; text-align: center; }
-        .file-item.folder .file-icon { color: #5dade2; }
-        
-        .file-info { flex: 1; min-width: 0; }
-        .file-name { font-weight: 500; word-break: break-all; }
-        .file-details { font-size: 13px; color: var(--text-secondary); }
-        
-        /* --- Skeleton Loader --- */
-        .skeleton-item { display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--glass-border); }
-        .skeleton-icon { width: 30px; height: 24px; margin-right: 20px; background: rgba(255,255,255,0.1); border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; }
-        .skeleton-text { flex: 1; }
-        .skeleton-line { height: 16px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: 8px; animation: pulse 1.5s infinite ease-in-out; }
-        .skeleton-line.short { width: 30%; height: 12px; margin-bottom: 0; }
-
-        /* --- Pagination --- */
-        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 25px; }
-        .pagination button { /* Styles from .btn */ }
-
-        /* --- Status & Toasts --- */
-        .status-message { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
-        .status-message i { font-size: 3rem; margin-bottom: 15px; display: block; }
-
-        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
-        .toast {
-            padding: 15px 20px;
-            border-radius: var(--border-radius-md);
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            opacity: 0;
-            transform: translateX(100%);
-            animation: slideInToast 0.5s forwards, fadeOutToast 0.5s 4.5s forwards;
-        }
-        @keyframes slideInToast { to { opacity: 1; transform: translateX(0); } }
-        @keyframes fadeOutToast { to { opacity: 0; transform: translateX(100%); } }
-        .toast.success { background: linear-gradient(135deg, #28a745, #218838); }
-        .toast.error { background: linear-gradient(135deg, #dc3545, #c82333); }
-        .toast.info { background: linear-gradient(135deg, #17a2b8, #138496); }
-
-        /* --- Responsive Design --- */
-        @media (max-width: 768px) {
-            .container { padding: 15px; }
-            h1 { font-size: 1.8rem; }
-            .header { flex-direction: column; text-align: center; }
-            .file-controls, .browser-nav { flex-direction: column; align-items: stretch; }
-            .search-box { max-width: none; }
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
         }
 
-        /* --- Scrollbar --- */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+        .animate-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
+        /* Delay for staggered animations */
+        .features-grid .feature-card:nth-child(1) { transition-delay: 0.1s; }
+        .features-grid .feature-card:nth-child(2) { transition-delay: 0.2s; }
+        .features-grid .feature-card:nth-child(3) { transition-delay: 0.3s; }
+        .features-grid .feature-card:nth-child(4) { transition-delay: 0.1s; }
+        .features-grid .feature-card:nth-child(5) { transition-delay: 0.2s; }
+        .features-grid .feature-card:nth-child(6) { transition-delay: 0.3s; }
+        .features-grid .feature-card:nth-child(7) { transition-delay: 0.1s; }
+        .features-grid .feature-card:nth-child(8) { transition-delay: 0.2s; }
+        .features-grid .feature-card:nth-child(9) { transition-delay: 0.3s; }
+        .features-grid .feature-card:nth-child(10) { transition-delay: 0.1s; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header panel">
-            <h1><i class="fas fa-satellite-dish"></i> GeminiDesk</h1>
-            <div class="header-actions">
-                <button id="refreshBtn" class="btn"><i class="fas fa-sync-alt"></i> Refresh</button>
-                <button id="healthBtn" class="btn"><i class="fas fa-heart-pulse"></i> Health Check</button>
+
+    <div id="aurora-background">
+        <div class="aurora-shape shape1"></div>
+        <div class="aurora-shape shape2"></div>
+        <div class="aurora-shape shape3"></div>
+    </div>
+
+    <header class="header">
+        <div class="logo-container">
+            <!-- Can add a small logo here if desired -->
+        </div>
+        <div class="theme-switch-wrapper">
+            <label class="theme-switch" for="checkbox">
+                <input type="checkbox" id="checkbox" />
+                <div class="slider round"></div>
+            </label>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/icon.ico" alt="GeminiDesk Logo" class="hero-logo animate-on-scroll">
+            <h1 class="animate-on-scroll">🚀 GeminiDesk: The Gemini Desktop App 🚀</h1>
+            <p class="animate-on-scroll" style="transition-delay: 0.1s;">
+                <strong>Is Google Gemini just another browser tab in your sea of tabs? We fixed that.</strong>
+                <br />
+                GeminiDesk liberates the brilliant Google Gemini AI, giving it a proper home on your desktop. This is the native, feature-packed Gemini desktop app you've been searching for.
+            </p>
+            <div class="badges animate-on-scroll" style="transition-delay: 0.2s;">
+                <a href="https://github.com/hillelkingqt/GeminiDesk/releases/latest">
+                    <img src="https://img.shields.io/github/v/release/hillelkingqt/GeminiDesk?style=for-the-badge&logo=github&label=Latest%20Release&color=8ab4f8" alt="Latest Release">
+                </a>
+                <a href="https://github.com/hillelkingqt/GeminiDesk/releases">
+                    <img src="https://img.shields.io/github/downloads/hillelkingqt/GeminiDesk/total?style=for-the-badge&logo=github&color=c58af9" alt="Total Downloads">
+                </a>
+                <a href="https://github.com/hillelkingqt/GeminiDesk/issues">
+                    <img src="https://img.shields.io/github/issues/hillelkingqt/GeminiDesk?style=for-the-badge&logo=github&color=81c995" alt="Issues">
+                </a>
+                <img src="https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows" alt="Platform: Windows">
+                <img src="https://img.shields.io/badge/platform-macOS-lightgrey?style=for-the-badge&logo=apple" alt="Platform: macOS">
             </div>
-        </header>
+            <p class="animate-on-scroll" style="transition-delay: 0.3s;">
+                <em>GeminiDesk transforms your AI interaction from a clumsy browser dance into a native desktop symphony. No more clutter. No more distractions. Just pure, unadulterated productivity with a sprinkle of magic.</em>
+            </p>
+        </section>
 
-        <main class="panel-container">
-            <!-- Client List Panel -->
-            <section class="panel" id="clientPanel">
-                <h2 class="panel-header"><i class="fas fa-network-wired"></i> Connected Devices</h2>
-                <div id="clientList" class="clients-grid">
-                    <!-- Skeleton Loader for Clients -->
+        <section id="features">
+            <h2 class="animate-on-scroll">✨ Why Your Google Gemini App Deserves a Throne ✨</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">GeminiDesk is more than a simple wrapper; it's a native command center for the Google Gemini AI. This desktop app is loaded with features that transform your workflow.</p>
+            <div class="features-grid">
+                <!-- Feature Cards -->
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Screenshot to Chat
+                    </h3>
+                    <p>Instantly snip any part of your screen with a hotkey. The image is magically beamed into your chat, ready for Gemini's brilliant analysis. It's like having a conversation with your screen!</p>
                 </div>
-            </section>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+                        Universal File Drop
+                    </h3>
+                    <p>Drag and drop images, PDFs, text files—heck, almost any file—directly into the app. It's instantly ready for upload. The friction? Gone. The future? Now.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        Instant Model Switching
+                    </h3>
+                    <p>Why click through menus like a peasant? Use dedicated hotkeys to instantly fire up a new chat with either the lightning-fast <strong>Flash</strong> model or the powerhouse <strong>Pro</strong> model.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        Find That Chat... Instantly!
+                    </h3>
+                    <p>Lost a brilliant idea in the chat abyss? Hit the search hotkey to immediately focus the search bar and unearth your past conversations. Your brain will thank you.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                        Multi-Window Mania
+                    </h3>
+                    <p>Who said you can only have one conversation at a time? Open multiple windows and conquer multiple topics simultaneously. It’s organized chaos at its finest.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                        Always-On-Top Mode
+                    </h3>
+                    <p>Keep Gemini watching over your shoulder (in a non-creepy way) while you work. Perfect for coding, writing, or just feeling less alone in the universe.</p>
+                </div>
+                 <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.5A4.5 4.5 0 0 0 17.5 5c-.5 0-1 .5-1.5.5-1.5 0-2.75-1.06-4-1.06-3 0-6 8-6 12.5A4.5 4.5 0 0 0 6.5 19c.5 0 1-.5 1.5-.5Z"/></svg>
+                        Your Keys, Your Kingdom
+                    </h3>
+                    <p>Don't like our defaults? Remap every shortcut in the settings. Choose whether shortcuts work globally (from any app) or only when GeminiDesk is active for a truly custom workflow.</p>
+                </div>
+                 <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h12Z"/><path d="m9 16 3-3 3 3"/><path d="M12 13V7"/></svg>
+                        Run on Startup
+                    </h3>
+                    <p>Have GeminiDesk greet you the moment your computer boots up. Because your AI assistant should be as ready to work as you are (or more so).</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                        The Little Things
+                    </h3>
+                    <p>Persistent Login, Automatic Mic Permissions, and Smart, Non-Intrusive Updates. We've ironed out all the wrinkles so it just works.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21a4 4 0 0 1-4-4V5a2 2 0 0 1 2-2h4"></path><path d="M9 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5"></path><path d="M12 3v18"></path></svg>
+                        Your App, Your Style
+                    </h3>
+                    <p>Choose between a sleek <strong>Dark</strong> mode, a clean <strong>Light</strong> mode, or let the app <strong>sync with your OS</strong>. Your eyes will thank you.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><path d="M15 2l-3 3-3-3"/><path d="m10 10 4 4"/><path d="m14 10-4 4"/></svg>
+                        Canvas Mode
+                    </h3>
+                    <p>Need more space? Activate Canvas Mode to instantly expand the window to a larger, more comfortable size, perfect for deep dives and extensive conversations.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        System Notifications
+                    </h3>
+                    <p>Receive important announcements and updates directly through a clean, native notification system. No more checking GitHub for news.</p>
+                </div>
+                 <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
+                        "Open With" Integration
+                    </h3>
+                    <p>Set GeminiDesk as the default application for images or text files. Opening a file with the app will instantly load it into the chat, ready for action.</p>
+                </div>
+                 <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                        Fullscreen & Custom Header
+                    </h3>
+                    <p>Go big with a dedicated fullscreen mode. The sleek, draggable header bar even shows your current chat's title, so you always know what you're working on.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
+                        Dual AI Engines: Gemini & AI Studio
+                    </h3>
+                    <p>Switch between the standard Gemini App for conversational chat and the powerful <strong>AI Studio</strong> for advanced prompt engineering and development, right from the startup screen.</p>
+                </div>
+                <div class="feature-card animate-on-scroll">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6l4 4v10a2 2 0 0 1-2 2z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h2"/><circle cx="15.5" cy="15.5" r="2.5"/><path d="M17 17l-1.5-1.5"/></svg>
+                        Find In Page
+                    </h3>
+                    <p>Never lose your train of thought again. Use the built-in Find in Page (<code>Ctrl+F</code>) to instantly locate specific text within your current conversation. Perfect for long chats.</p>
+                </div>
+            </div>
+        </section>
 
-            <!-- File Browser Panel -->
-            <section class="panel hidden" id="browserPanel">
-                <div class="browser-header">
-                    <h2 id="browserTitle" class="panel-header">File Browser</h2>
-                    <nav class="browser-nav">
-                        <button id="backToDevicesBtn" class="btn"><i class="fas fa-arrow-left"></i> Devices</button>
-                        <button id="upDirectoryBtn" class="btn"><i class="fas fa-arrow-up"></i> Up</button>
-                        <div class="breadcrumb" id="breadcrumbNav"><ol></ol></div>
-                    </nav>
+        <section id="screenshots">
+            <h2 class="animate-on-scroll">📸 App in Action</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">A glimpse into the clean and powerful interface of GeminiDesk.</p>
+            <div class="screenshot-gallery animate-on-scroll">
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot1.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot1.png" alt="Screenshot 1"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot2.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot2.png" alt="Screenshot 2"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot3.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot3.png" alt="Screenshot 3"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot4.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot4.png" alt="Screenshot 4"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot5.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot5.png" alt="Screenshot 5"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot6.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot6.png" alt="Screenshot 6"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot7.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot7.png" alt="Screenshot 7"></a>
+                <a href="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot8.png" target="_blank" class="screenshot-item"><img src="https://raw.githubusercontent.com/hillelkingqt/GeminiDesk/main/screenshots/screenshot8.png" alt="Screenshot 8"></a>
+                <div class="screenshot-item placeholder"><span>New Screenshot<br>Coming Soon</span></div>
+                <div class="screenshot-item placeholder"><span>New Screenshot<br>Coming Soon</span></div>
+                <div class="screenshot-item placeholder"><span>New Screenshot<br>Coming Soon</span></div>
+                <div class="screenshot-item placeholder"><span>New Screenshot<br>Coming Soon</span></div>
+            </div>
+        </section>
+
+        <section id="shortcuts">
+            <h2 class="animate-on-scroll">⌨️ The Secret Handshakes (Default Shortcuts)</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">Access the magic from anywhere in your OS. (Remember, you can change ALL of these in the settings!)</p>
+            <div class="table-container animate-on-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Shortcut</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>Alt</code> + <code>G</code></td><td>Toggle App Visibility (Show / Hide)</td></tr>
+                        <tr><td><code>Alt</code> + <code>N</code></td><td>Open a New Window</td></tr>
+                        <tr><td><code>Alt</code> + <code>S</code></td><td>Search Chats Instantly</td></tr>
+                        <tr><td><code>Ctrl</code> + <code>F</code></td><td>Find Text in Current Page</td></tr>
+                        <tr><td><code>Ctrl</code> + <code>Alt</code> + <code>S</code></td><td>Capture Screenshot & Paste into Chat</td></tr>
+                        <tr><td><code>Alt</code> + <code>P</code></td><td>New Chat with <strong>Pro</strong> Model</td></tr>
+                        <tr><td><code>Alt</code> + <code>F</code></td><td>New Chat with <strong>Flash</strong> Model</td></tr>
+                        <tr><td><code>Alt</code> + <code>R</code></td><td>Refresh the Active View</td></tr>
+                        <tr><td><code>Alt</code> + <code>I</code></td><td>Show Instructions / Onboarding Screen</td></tr>
+                        <tr><td><code>Alt</code> + <code>Q</code></td><td>Close Current Window</td></tr>
+                        <tr><td><code>Ctrl</code> + <code>W</code></td><td>Quit Application</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="installation">
+            <h2 class="animate-on-scroll">💾 Installation</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">Getting this slab of awesome onto your machine is laughably simple.</p>
+            <div style="max-width: 65ch; margin: 0 auto;" class="animate-on-scroll">
+                <ol style="list-style-position: inside; padding-left: 0;">
+                    <li style="margin-bottom: 1rem;">Brave the digital seas and navigate to the <a href="https://github.com/hillelkingqt/GeminiDesk/releases/latest" target="_blank"><strong>Latest Release</strong></a> page.</li>
+                    <li style="margin-bottom: 1rem;">Download the correct file for your operating system:
+                        <ul style="list-style-type: disc; margin-left: 2rem; margin-top: 0.5rem;">
+                            <li><strong>Windows:</strong> Grab the <code>...Setup-x.x.x.exe</code> file.</li>
+                            <li><strong>macOS:</strong> Snag the <code>.dmg</code> file.</li>
+                        </ul>
+                    </li>
+                    <li style="margin-bottom: 1rem;">Follow the standard installation procedure for your OS:
+                        <ul style="list-style-type: disc; margin-left: 2rem; margin-top: 0.5rem;">
+                            <li><strong>Windows:</strong> Run the installer. Click 'Next' like you mean it.</li>
+                            <li><strong>macOS:</strong> Open the <code>.dmg</code> and drag the GeminiDesk icon into your Applications folder.</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+            <p style="text-align: center; margin-top: 2rem;" class="animate-on-scroll">That's it! GeminiDesk is now a permanent resident on your desktop. Treat it well.</p>
+        </section>
+
+        <section id="developer">
+            <h2 class="animate-on-scroll">🛠️ For Developers: Building From the Ashes</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">Want to peek under the hood or forge your own version? We admire your courage.</p>
+            
+            <div class="animate-on-scroll">
+                <h3>Prerequisites</h3>
+                <ul style="list-style-position: inside; margin-left: 1rem; margin-bottom: 2rem;">
+                    <li><a href="https://nodejs.org/" target="_blank">Node.js</a> (v16 or higher is a good life choice)</li>
+                    <li><a href="https://git-scm.com/" target="_blank">Git</a></li>
+                </ul>
+            </div>
+
+            <div class="animate-on-scroll">
+                <h3>Get Started</h3>
+                <p>1. <strong>Clone the legend:</strong></p>
+                <div class="code-block-wrapper">
+                    <pre><code class="language-sh">git clone https://github.com/hillelkingqt/GeminiDesk.git
+cd GeminiDesk</code></pre>
+                    <button class="copy-btn">Copy</button>
                 </div>
 
-                <div class="file-controls">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchInput" placeholder="Filter files and folders...">
-                    </div>
-<div class="control-group">
-    <label for="sortSelect">Sort by:</label>
-    <!-- The new wrapper div starts here -->
-    <div class="select-wrapper">
-        <select id="sortSelect">
-            <option value="name_asc">Name (A-Z)</option>
-            <option value="name_desc">Name (Z-A)</option>
-            <option value="date_desc">Date (Newest)</option>
-            <option value="date_asc">Date (Oldest)</option>
-            <option value="size_desc">Size (Largest)</option>
-            <option value="size_asc">Size (Smallest)</option>
-        </select>
-    </div>
-    <!-- The new wrapper div ends here -->
-</div>
-                    <div class="control-group">
-                        <label><input type="checkbox" id="hideFolders"> Hide Folders</label>
-                    </div>
+                <p>2. <strong>Install the ancient runes (dependencies):</strong></p>
+                <div class="code-block-wrapper">
+                    <pre><code class="language-sh">npm install</code></pre>
+                    <button class="copy-btn">Copy</button>
                 </div>
 
-                <div id="fileList" class="file-list">
-                    <!-- Skeleton Loader for Files -->
+                <p>3. <strong>Unleash the beast (run in dev mode):</strong></p>
+                <div class="code-block-wrapper">
+                    <pre><code class="language-sh">npm start</code></pre>
+                    <button class="copy-btn">Copy</button>
                 </div>
 
-                <div class="pagination" id="pagination"></div>
-            </section>
-        </main>
-    </div>
-    <div id="toast-container"></div>
+                <p>4. <strong>Package it for the masses (build the installer):</strong></p>
+                <div class="code-block-wrapper">
+                    <pre><code class="language-sh">npm run build</code></pre>
+                    <button class="copy-btn">Copy</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="contribute">
+            <h2 class="animate-on-scroll">🤝 Let's Build a Dynasty</h2>
+            <p style="text-align: center; margin-bottom: 4rem;" class="animate-on-scroll">Contributions are the lifeblood of open source. If you have an idea that's so good it's scary, we want to see it.</p>
+            <ol style="list-style-position: inside; max-width: 65ch; margin: 0 auto;" class="animate-on-scroll">
+                <li style="margin-bottom: 1rem;">Fork the Project</li>
+                <li style="margin-bottom: 1rem;">Create your Feature Branch (<code>git checkout -b feature/MindBlowingFeature</code>)</li>
+                <li style="margin-bottom: 1rem;">Commit your Changes (<code>git commit -m 'Add some MindBlowingFeature'</code>)</li>
+                <li style="margin-bottom: 1rem;">Push to the Branch (<code>git push origin feature/MindBlowingFeature</code>)</li>
+                <li style="margin-bottom: 1rem;">Open a Pull Request and prepare for glory.</li>
+            </ol>
+        </section>
+    </main>
+
+    <footer>
+        <p>Distributed under the MIT License. <a href="https://github.com/hillelkingqt/GeminiDesk/blob/main/LICENSE" target="_blank">View License</a></p>
+    </footer>
 
     <script>
-        class GeminiDeskDashboard {
-            constructor() {
-                this.serverUrl = 'https://latex-v25b.onrender.com';
-                this.currentClient = null;
-                this.currentPath = '';
-                this.currentPage = 1;
-                this.itemsPerPage = 50;
-                this.currentSort = 'name_asc';
-                this.hideFolders = false;
-                this.currentFilter = '';
-                this.fileCache = new Map();
+    // --- Theme Toggle ---
+    const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+    const currentTheme = localStorage.getItem('theme');
 
-                this.init();
-            }
-
-            init() {
-                this.bindEvents();
-                this.loadClients();
-            }
-
-            bindEvents() {
-                document.getElementById('refreshBtn').addEventListener('click', () => this.loadClients());
-                document.getElementById('healthBtn').addEventListener('click', () => this.checkHealth());
-                document.getElementById('backToDevicesBtn').addEventListener('click', () => this.showPanel('clientPanel'));
-                document.getElementById('upDirectoryBtn').addEventListener('click', () => this.navigateUp());
-
-                const sortSelect = document.getElementById('sortSelect');
-                sortSelect.addEventListener('change', () => {
-                    this.currentSort = sortSelect.value;
-                    this.renderFileList();
-                });
-
-                const hideFoldersCheckbox = document.getElementById('hideFolders');
-                hideFoldersCheckbox.addEventListener('change', () => {
-                    this.hideFolders = hideFoldersCheckbox.checked;
-                    this.renderFileList();
-                });
-                
-                const searchInput = document.getElementById('searchInput');
-                searchInput.addEventListener('keyup', () => {
-                    this.currentFilter = searchInput.value.toLowerCase();
-                    this.renderFileList();
-                });
-
-                document.getElementById('clientList').addEventListener('click', e => {
-                    const card = e.target.closest('.client-card.clickable');
-                    if (card) {
-                        this.selectClient(card.dataset.id, card.dataset.name);
-                    }
-                });
-
-                document.getElementById('fileList').addEventListener('click', e => {
-                    const item = e.target.closest('.file-item');
-                    if (!item) return;
-
-                    const { path, type, name } = item.dataset;
-                    if (type === 'dir') {
-                        this.loadDirectory(path);
-                    } else if (type === 'file') {
-                        this.downloadFile(path, name, item);
-                    }
-                });
-                
-                document.getElementById('breadcrumbNav').addEventListener('click', e => {
-                    e.preventDefault();
-                    const link = e.target.closest('a');
-                    if(link && link.dataset.path) {
-                        this.loadDirectory(link.dataset.path);
-                    }
-                });
-            }
-
-            async fetchWithTimeout(url, options = {}, timeout = 20000) {
-                const controller = new AbortController();
-                const id = setTimeout(() => controller.abort(), timeout);
-                const response = await fetch(url, { ...options, signal: controller.signal });
-                clearTimeout(id);
-                return response;
-            }
-
-            async loadClients() {
-                const clientList = document.getElementById('clientList');
-                this.renderSkeleton(clientList, 'client');
-                try {
-                    const response = await this.fetchWithTimeout(`${this.serverUrl}/api/clients`);
-                    if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-                    const data = await response.json();
-                    if (data.success) {
-                        this.renderClientList(data.clients);
-                    } else {
-                        throw new Error(data.error || 'Failed to load clients');
-                    }
-                } catch (error) {
-                    this.showError(clientList, `Failed to load devices: ${error.message}`);
-                    this.showToast('error', 'Could not fetch devices.');
-                }
-            }
-            
-            async checkHealth() {
-                try {
-                    const response = await this.fetchWithTimeout(`${this.serverUrl}/api/health`);
-                     if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-                    const data = await response.json();
-                    if (data.success) {
-                        this.showToast('success', `Server OK | ${data.clients.activeWebSockets} active connections.`);
-                    } else {
-                        throw new Error('Health check failed');
-                    }
-                } catch (error) {
-                    this.showToast('error', `Health check failed: ${error.message}`);
-                }
-            }
-            
-            renderClientList(clients) {
-                const clientList = document.getElementById('clientList');
-                if (clients.length === 0) {
-                    clientList.innerHTML = `<div class="status-message"><i class="fas fa-ghost"></i>No devices connected.</div>`;
-                    return;
-                }
-                clientList.innerHTML = clients.map((client, index) => {
-                    const isClickable = client.canControl;
-                    return `
-                        <div class="client-card ${client.status} ${isClickable ? 'clickable' : ''}" 
-                             data-id="${client.id}" data-name="${this.escapeHtml(client.name)}"
-                             style="animation-delay: ${index * 50}ms">
-                            <div class="client-info">
-                                <h3><span class="client-status-dot"></span>${this.escapeHtml(client.name)}</h3>
-                                <p>${client.statusText}<br>ID: ${client.shortId}...</p>
-                            </div>
-                        </div>`;
-                }).join('');
-            }
-            
-            async selectClient(clientId, clientName) {
-                this.currentClient = { id: clientId, name: clientName };
-                document.getElementById('browserTitle').innerHTML = `<i class="fas fa-desktop"></i> ${clientName}`;
-                this.showPanel('browserPanel');
-                this.renderSkeleton(document.getElementById('fileList'), 'file');
-                this.renderBreadcrumb('');
-                
-                try {
-                    const response = await this.fetchWithTimeout(`${this.serverUrl}/api/client/${clientId}/drives`, { method: 'POST' });
-                    if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        const driveItems = data.drives.map(drive => ({
-                            name: `Drive ${drive}`,
-                            path: drive,
-                            isDirectory: true,
-                            size: 0,
-                            birthtime: 0
-                        }));
-                        this.fileCache.set('drives', driveItems);
-                        this.currentPath = 'drives'; // A virtual path for drives
-                        this.renderFileList();
-                        this.renderBreadcrumb(data.clientName);
-                    } else {
-                        throw new Error(data.error);
-                    }
-                } catch (error) {
-                    this.showError(document.getElementById('fileList'), `Failed to load drives: ${error.message}`);
-                }
-            }
-
-            async loadDirectory(path) {
-                if (this.currentPath === path) return;
-                this.currentPath = path;
-                this.renderSkeleton(document.getElementById('fileList'), 'file');
-                this.renderBreadcrumb(path);
-                document.getElementById('searchInput').value = '';
-                this.currentFilter = '';
-
-                try {
-                    const response = await this.fetchWithTimeout(`${this.serverUrl}/api/client/${this.currentClient.id}/list`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ path })
-                    });
-                    if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        this.fileCache.set(path, data.items);
-                        this.renderFileList();
-                    } else {
-                        throw new Error(data.error);
-                    }
-                } catch (error) {
-                    this.showError(document.getElementById('fileList'), `Failed to load directory: ${error.message}`);
-                }
-            }
-
-            renderFileList() {
-                let items = this.fileCache.get(this.currentPath) || [];
-
-                // Filter
-                if (this.currentFilter) {
-                    items = items.filter(item => item.name.toLowerCase().includes(this.currentFilter));
-                }
-                if (this.hideFolders) {
-                    items = items.filter(item => !item.isDirectory);
-                }
-                
-                // Sort
-                items = this.sortItems(items);
-                
-                // Pagination (for now, let's render all)
-                const fileList = document.getElementById('fileList');
-                if (items.length === 0) {
-                    fileList.innerHTML = `<div class="status-message"><i class="fas fa-folder-open"></i>Directory is empty or filtered out.</div>`;
-                } else {
-                    fileList.innerHTML = items.map((item, index) => {
-                        const icon = item.isDirectory ? 'fas fa-folder' : this.getFileIcon(item.name);
-                        const size = item.isDirectory ? 'Folder' : this.formatBytes(item.size);
-                        const date = item.birthtime ? new Date(item.birthtime).toLocaleDateString() : '';
-                        const details = [size, date].filter(Boolean).join(' • ');
-                        
-                        return `
-                            <div class="file-item ${item.isDirectory ? 'folder' : 'file'}" 
-                                 data-path="${this.escapeHtml(item.path)}" 
-                                 data-name="${this.escapeHtml(item.name)}"
-                                 data-type="${item.isDirectory ? 'dir' : 'file'}"
-                                 style="animation-delay: ${index * 15}ms">
-                                <div class="file-icon"><i class="${icon}"></i></div>
-                                <div class="file-info">
-                                    <div class="file-name">${this.escapeHtml(item.name)}</div>
-                                    <div class="file-details">${details}</div>
-                                </div>
-                            </div>`;
-                    }).join('');
-                }
-            }
-
-            sortItems(items) {
-                return [...items].sort((a, b) => {
-                    if (!this.hideFolders && a.isDirectory !== b.isDirectory) {
-                        return a.isDirectory ? -1 : 1;
-                    }
-                    const [field, dir] = this.currentSort.split('_');
-                    const mod = dir === 'asc' ? 1 : -1;
-                    
-                    if (field === 'name') return a.name.localeCompare(b.name) * mod;
-                    if (field === 'date') return (a.birthtime - b.birthtime) * mod;
-                    if (field === 'size') return (a.size - b.size) * mod;
-                    return 0;
-                });
-            }
-
-            renderBreadcrumb(path) {
-                const breadcrumbNav = document.getElementById('breadcrumbNav').querySelector('ol');
-                if (!path || path === 'drives') {
-                    breadcrumbNav.innerHTML = `<li>${this.currentClient.name || 'Select a drive'}</li>`;
-                    document.getElementById('upDirectoryBtn').style.display = 'none';
-                    return;
-                }
-                
-                document.getElementById('upDirectoryBtn').style.display = 'inline-flex';
-                
-                const parts = path.replace(/\\/g, '/').split('/').filter(Boolean);
-                let currentPath = '';
-                breadcrumbNav.innerHTML = parts.map((part, i) => {
-                    // For Windows drives (e.g., C:), don't append slash
-                    currentPath += (i === 0 && part.endsWith(':')) ? part + '\\' : part + '\\';
-                    if (i === parts.length - 1) {
-                        return `<li>${this.escapeHtml(part)}</li>`;
-                    }
-                    return `<li><a href="#" data-path="${this.escapeHtml(currentPath)}">${this.escapeHtml(part)}</a></li>`;
-                }).join('');
-            }
-
-            navigateUp() {
-                if (!this.currentPath || this.currentPath === 'drives' || !this.currentPath.includes('\\')) {
-                    this.selectClient(this.currentClient.id, this.currentClient.name); // Go back to drives
-                    return;
-                }
-                // Handle cases like C:\ to go back to drives
-                if (this.currentPath.endsWith(':\\')) {
-                     this.selectClient(this.currentClient.id, this.currentClient.name);
-                     return;
-                }
-                
-                const parentPath = this.currentPath.substring(0, this.currentPath.lastIndexOf('\\'));
-                // If the parent is just the drive letter (e.g., C:), add the backslash
-                if (parentPath.endsWith(':')) {
-                    this.loadDirectory(parentPath + '\\');
-                } else {
-                    this.loadDirectory(parentPath);
-                }
-            }
-            
-            async downloadFile(filePath, fileName, element) {
-                const originalIcon = element.querySelector('.file-icon').innerHTML;
-                element.querySelector('.file-icon').innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
-                element.style.pointerEvents = 'none';
-                element.style.opacity = '0.7';
-
-                try {
-                    this.showToast('info', `Starting download for ${fileName}...`);
-                    const response = await this.fetchWithTimeout(`${this.serverUrl}/api/client/${this.currentClient.id}/download`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ path: filePath })
-                    }, 300000); // 5 minute timeout for downloads
-
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({ error: 'Download failed' }));
-                        throw new Error(errorData.error);
-                    }
-                    
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = fileName;
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    this.showToast('success', `${fileName} downloaded successfully.`);
-                    
-                } catch (error) {
-                    this.showToast('error', `Download failed: ${error.message}`);
-                } finally {
-                    element.querySelector('.file-icon').innerHTML = originalIcon;
-                    element.style.pointerEvents = 'auto';
-                    element.style.opacity = '1';
-                }
-            }
-
-            // --- UI & Utility Methods ---
-
-            showPanel(panelId) {
-                document.querySelectorAll('.panel-container > .panel').forEach(p => p.classList.add('hidden'));
-                document.getElementById(panelId).classList.remove('hidden');
-            }
-            
-            renderSkeleton(container, type) {
-                const count = type === 'client' ? 6 : 10;
-                let skeletonHTML = '';
-                for (let i = 0; i < count; i++) {
-                    skeletonHTML += type === 'client' ? `
-                        <div class="client-card">
-                            <div class="skeleton-icon" style="width: 12px; height: 12px; border-radius: 50%; margin-right: 12px;"></div>
-                            <div class="skeleton-text">
-                                <div class="skeleton-line" style="width: 60%;"></div>
-                                <div class="skeleton-line short" style="width: 80%;"></div>
-                            </div>
-                        </div>` : `
-                        <div class="skeleton-item">
-                            <div class="skeleton-icon"></div>
-                            <div class="skeleton-text">
-                                <div class="skeleton-line"></div>
-                                <div class="skeleton-line short"></div>
-                            </div>
-                        </div>`;
-                }
-                container.innerHTML = skeletonHTML;
-            }
-
-            showError(container, message) {
-                container.innerHTML = `<div class="status-message"><i class="fas fa-exclamation-triangle"></i>${this.escapeHtml(message)}</div>`;
-            }
-
-            showToast(type, message) {
-                const toastContainer = document.getElementById('toast-container');
-                const toast = document.createElement('div');
-                toast.className = `toast ${type}`;
-                const iconClass = { success: 'fa-check-circle', error: 'fa-times-circle', info: 'fa-info-circle' }[type];
-                toast.innerHTML = `<i class="fas ${iconClass}"></i> ${this.escapeHtml(message)}`;
-                toastContainer.appendChild(toast);
-                setTimeout(() => toast.remove(), 5000);
-            }
-
-// --- הקוד החדש והמשופר להדבקה ---
-getFileIcon(name) {
-    const ext = name.split('.').pop().toLowerCase();
-    const iconMap = {
-        'pdf': 'fas fa-file-pdf',
-        'doc': 'fas fa-file-word', 'docx': 'fas fa-file-word',
-        'xls': 'fas fa-file-excel', 'xlsx': 'fas fa-file-excel',
-        'ppt': 'fas fa-file-powerpoint', 'pptx': 'fas fa-file-powerpoint',
-        'jpg': 'fas fa-file-image', 'jpeg': 'fas fa-file-image', 'png': 'fas fa-file-image', 'gif': 'fas fa-file-image', 'bmp': 'fas fa-file-image', 'svg': 'fas fa-file-image',
-        'mp4': 'fas fa-file-video', 'avi': 'fas fa-file-video', 'mov': 'fas fa-file-video',
-        'mp3': 'fas fa-file-audio', 'wav': 'fas fa-file-audio',
-        'zip': 'fas fa-file-archive', 'rar': 'fas fa-file-archive', '7z': 'fas fa-file-archive',
-        'txt': 'fas fa-file-alt',
-        'js': 'fas fa-file-code', 'html': 'fas fa-file-code', 'css': 'fas fa-file-code', 'py': 'fas fa-file-code',
-        'exe': 'fas fa-cog'
-    };
-    // This is the better default icon for any other file type
-    return iconMap[ext] || 'fas fa-file-lines';
-}            formatBytes = (b,d=2) => {if(0===b)return"0 Bytes";const c=0>d?0:d,e=Math.floor(Math.log(b)/Math.log(1024));return parseFloat((b/Math.pow(1024,e)).toFixed(c))+" "+["Bytes","KB","MB","GB","TB"][e]};
-            escapeHtml = (s) => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]);
+    if (currentTheme) {
+        document.documentElement.setAttribute('class', currentTheme);
+        if (currentTheme === 'light-mode') {
+            toggleSwitch.checked = true;
         }
+    }
 
-        document.addEventListener('DOMContentLoaded', () => new GeminiDeskDashboard());
+    function switchTheme(e) {
+        if (e.target.checked) {
+            document.documentElement.setAttribute('class', 'light-mode');
+            localStorage.setItem('theme', 'light-mode');
+        } else {
+            document.documentElement.setAttribute('class', '');
+            localStorage.setItem('theme', 'dark-mode');
+        }
+    }
+
+    toggleSwitch.addEventListener('change', switchTheme, false);
+
+    // --- Scroll Animations ---
+    const scrollElements = document.querySelectorAll(".animate-on-scroll");
+
+    const elementInView = (el, dividend = 1) => {
+        const elementTop = el.getBoundingClientRect().top;
+        return (
+            elementTop <= (window.innerHeight || document.documentElement.clientHeight) / dividend
+        );
+    };
+
+    const displayScrollElement = (element) => {
+        element.classList.add("is-visible");
+    };
+
+    const handleScrollAnimation = () => {
+        scrollElements.forEach((el) => {
+            if (elementInView(el, 1.25)) {
+                displayScrollElement(el);
+            } 
+        })
+    }
+
+    window.addEventListener("scroll", handleScrollAnimation);
+    handleScrollAnimation();
+
+
+    // --- Copy to Clipboard ---
+    const copyButtons = document.querySelectorAll('.copy-btn');
+    copyButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const pre = button.closest('.code-block-wrapper').querySelector('pre');
+            const text = pre.innerText;
+
+            navigator.clipboard.writeText(text).then(() => {
+                button.innerText = 'Copied!';
+                setTimeout(() => {
+                    button.innerText = 'Copy';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        });
+    });
+
+    // --- Interactive Glow Effect ---
+    const body = document.body;
+    body.addEventListener('mousemove', e => {
+        body.style.setProperty('--x', e.clientX + 'px');
+        body.style.setProperty('--y', e.clientY + 'px');
+    });
+    
+    // --- Card Glow Effect ---
+    const cards = document.querySelectorAll('.feature-card');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            card.style.setProperty('--x-card', x + 'px');
+            card.style.setProperty('--y-card', y + 'px');
+        });
+    });
+
     </script>
 </body>
 </html>
