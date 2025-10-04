@@ -26,7 +26,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install deps
-        run: npm install
+        run: npm ci
+
+      - name: Install macOS dependencies
+        if: runner.os  == 'macOS'
+        run: npm install dmg-license
 
       # --publish never כדי לא לפרסם, אבל עדיין יווצרו קבצי ה-updater
       - name: Build macOS (DMG + ZIP + updater files)
@@ -56,7 +60,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install deps
-        run: npm install
+        run: npm ci
 
       - name: Build Windows (EXE + updater files)
         run: npm run build -- --win --publish never
